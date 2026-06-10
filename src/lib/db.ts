@@ -1,12 +1,13 @@
 import Database from '@tauri-apps/plugin-sql';
 import { appDataDir, join } from '@tauri-apps/api/path';
-import { exists, mkdir} from '@tauri-apps/plugin-fs';
+import { exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { Task, CurrentWorkspace, HistoryWorkspace, Template } from '@/types';
 import { setIsSwitching, setIsReloadingForSwitch } from './storage-adapter';
 import { persistentLog } from './persistent-log';
 
 const DB_FILENAME = 'focus_flow.db';
 const PATH_STORAGE_KEY = 'FOCUS_FLOW_DB_PATH';
+const PATH_FILE_NAME = 'focus_flow_db_path.txt';
 
 // 新增：全局唯一的会话 ID。每次页面刷新都会生成新的，用于防范跨页面的幽灵 Promise 写入。
 const CURRENT_SESSION_ID = Math.random().toString(36).substring(2, 15);
@@ -30,24 +31,60 @@ export function clearDbCache(): void {
 }
 
 /**
+ * 从磁盘配置文件读取数据库路径（不依赖 localStorage）
+ */
+async function readDbPathFromFile(): Promise<string | null> {
+  try {
+    const appDataDirPath = await appDataDir();
+    const pathFile = await join(appDataDirPath, PATH_FILE_NAME);
+    if (await exists(pathFile)) {
+      const content = await readTextFile(pathFile);
+      const trimmed = content.trim();
+      if (trimmed) return trimmed;
+    }
+  } catch (e) {
+    console.warn('[DB] Failed to read db path file:', e);
+  }
+  return null;
+}
+
+/**
+ * 将数据库路径写入磁盘配置文件
+ */
+async function writeDbPathToFile(path: string): Promise<void> {
+  try {
+    const appDataDirPath = await appDataDir();
+    await writeTextFile(await join(appDataDirPath, PATH_FILE_NAME), path);
+  } catch (e) {
+    console.warn('[DB] Failed to write db path file:', e);
+  }
+}
+
+/**
  * 获取当前的数据库绝对路径（高容错版）
  */
 export async function getDbPath(): Promise<string> {
-  // 1. 优先读取用户自定义路径
+  // 1. 优先从磁盘文件读取（最稳定，不受 WebView localStorage 影响）
+  const filePath = await readDbPathFromFile();
+  if (filePath) {
+    // [DEBUG] console.log('[DB] getDbPath - Returning filePath:', filePath);
+    return filePath;
+  }
+
+  // 2. 向后兼容：读取 localStorage 中的路径
   const customPath = localStorage.getItem(PATH_STORAGE_KEY);
-  // [DEBUG] console.log('[DB] getDbPath - PATH_STORAGE_KEY value:', customPath);
   if (customPath) {
-    // [DEBUG] console.log('[DB] getDbPath - Returning customPath:', customPath);
+    // 🚀 如果 localStorage 有但文件没有，立刻同步到文件
+    await writeDbPathToFile(customPath);
     return customPath;
   }
-  // [DEBUG] console.log('[DB] getDbPath - No custom path, using fallback');
 
   try {
-    // 2. 尝试获取系统 AppData 目录
+    // 3. 尝试获取系统 AppData 目录
     const appDataDirPath = await appDataDir();
     const dbPath = await join(appDataDirPath, DB_FILENAME);
 
-    // 3. 尝试创建目录（如果因为权限报错，我们捕获它但不阻断流程）
+    // 4. 尝试创建目录（如果因为权限报错，我们捕获它但不阻断流程）
     try {
       const dirExists = await exists(appDataDirPath);
       if (!dirExists) {
@@ -59,7 +96,7 @@ export async function getDbPath(): Promise<string> {
 
     return dbPath;
   } catch (error) {
-    // 4. 终极兜底：如果不在 Tauri 环境或缺少 Path 权限，返回相对路径
+    // 5. 终极兜底：如果不在 Tauri 环境或缺少 Path 权限，返回相对路径
     console.error('[DB] Failed to resolve absolute DB path, falling back to relative:', error);
     return DB_FILENAME;
   }
@@ -121,7 +158,8 @@ export async function changeDbPath(newFolder: string): Promise<void> {
     });
     localStorage.setItem('SWITCH_LOGS', JSON.stringify(switchLogs.slice(-20)));
 
-    // 保存新路径到 localStorage
+    // 保存新路径到磁盘文件和 localStorage（文件优先，localStorage 作为 backup）
+    await writeDbPathToFile(newPath);
     localStorage.setItem(PATH_STORAGE_KEY, newPath);
 
     // 清除数据库缓存，并显式关闭当前数据库连接！
@@ -202,7 +240,9 @@ export async function getDb(): Promise<Database> {
       currentDbPath = dbPath; // 记录当前路径
       // [DEBUG] console.log('[DB] Loading database from:', dbPath);
 
-      dbInstance = await Database.load(`sqlite:${dbPath}`);
+      // 🚀 Windows 路径修复：将反斜杠替换为正斜杠，确保 sqlite: URI 能被 sqlx 正确解析
+      const normalizedPath = dbPath.replace(/\\/g, '/');
+      dbInstance = await Database.load(`sqlite:${normalizedPath}`);
       await initializeTables(dbInstance);
 
       return dbInstance;
@@ -812,10 +852,11 @@ export async function dbSetItem(key: string, value: string): Promise<void> {
     return;
   }
 
-  // 4. 终极防御：如果 getDb() 返回的实例连接的不是初始路径，阻断！
-  if (currentDbPath !== dbPath) {
-    console.warn('[DB] ABORT dbSetItem: Database connection shifted. Prevented cross-directory corruption.');
-    persistentLog('DB', 'ABORT dbSetItem - Connection shifted', 'WARN', { initialPath, currentDbPath, expectedPath: dbPath });
+  // 4. 🚀 放宽路径检查：只要 dbPath 有效就允许写入
+  // 原来的严格字符串比较容易因路径格式差异（反斜杠 vs 正斜杠）导致误判
+  if (!dbPath) {
+    console.warn('[DB] ABORT dbSetItem: Empty dbPath');
+    persistentLog('DB', 'ABORT dbSetItem - Empty dbPath', 'WARN');
     return;
   }
 
@@ -829,12 +870,12 @@ export async function dbSetItem(key: string, value: string): Promise<void> {
   );
   // [DEBUG] console.log(`[DB] ⚠️⚠️⚠️ WRITE EXECUTED - Path: ${dbPath}`);
 
-  // 大数据写入后等待一下，确保写入完成
-  if (isLargeData) {
-    // [DEBUG] console.log('[DB] Large data written, executing WAL checkpoint...');
-    // 关键修复：显式执行 WAL checkpoint，确保数据从 WAL 合并到主数据库
-    // 否则验证查询可能读不到 WAL 中的数据
+  // 🚀 关键修复：无论数据大小，都执行 WAL checkpoint，确保数据立即落盘
+  // 否则数据可能只在 WAL 中，应用关闭时 WAL 数据可能丢失
+  try {
     await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch (e) {
+    console.warn('[DB] WAL checkpoint failed:', e);
   }
 
   // ===== 写入后验证数据 =====
@@ -946,7 +987,9 @@ if (typeof window !== 'undefined') {
 export async function diagnoseDatabase(): Promise<void> {
   console.log('========== 数据库诊断 ==========');
   const dbPath = await getDbPath();
+  const filePath = await readDbPathFromFile();
   console.log('当前数据库路径:', dbPath);
+  console.log('文件记录的路径:', filePath || '(无)');
   console.log('localStorage PATH_STORAGE_KEY:', localStorage.getItem(PATH_STORAGE_KEY));
   console.log('currentDbPath 变量:', currentDbPath);
   console.log('CURRENT_SESSION_ID:', CURRENT_SESSION_ID);

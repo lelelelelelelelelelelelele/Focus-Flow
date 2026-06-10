@@ -140,10 +140,21 @@ export function resetStorageState() {
   persistentLog('Storage', 'Storage state reset', 'DEBUG');
 }
 
+/**
+ * 取消任何 pending 的 debounce timeout
+ */
+export function flushPendingWrite(): void {
+  if (_writeDebounceTimeout) {
+    clearTimeout(_writeDebounceTimeout);
+    _writeDebounceTimeout = null;
+  }
+}
+
 // 页面卸载时重置 hydration 状态
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     _isHydrated = false;
+    flushPendingWrite();
   });
 }
 
@@ -174,7 +185,8 @@ export function recordDataSnapshotForSwitch(): void {
 
 export const sqliteStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
-    const pathFromStorage = localStorage.getItem('FOCUS_FLOW_DB_PATH');
+    const { getDbPath: fetchPath } = await import('@/lib/db');
+    const pathFromStorage = await fetchPath();
     logTrace('GET_START', null, 'SQLite');
     const isHydrated = getIsHydrated();
     // [DEBUG] console.log(`[Storage] getItem - Key: ${name}, Hydrated: ${isHydrated}, Path: ${pathFromStorage}, HasReadValidData: ${_hasReadValidData}`);
@@ -203,37 +215,66 @@ export const sqliteStorage: StateStorage = {
         } catch (e) {}
 
         // 🚀 保存加载的有效数据，用于后续对比
-        // _loadedValidData = sqliteValue;
         _loadedTasksCount = tasks;
         _loadedZonesCount = zones;
         _hasReadValidData = true;
 
         // 🚀 设置新目录的数据基准，这样后续写入时才能正确比较
-        // 每次 getItem 都要更新快照为当前目录的数据
         console.log('[Storage] Updating data snapshot in getItem to current directory data: tasks=', tasks, 'zones=', zones);
         _previousDataSnapshot = { tasks, zones };
 
-        // 🚀 打印日志，但不清除 skipWrite
-        // skipWrite 将由 setItem 在写入有效数据后清除
         if (tasks > 0) {
-          // [DEBUG] console.log(`[Storage] Valid data loaded in getItem, keeping skipWrite until setItem (tasks: ${tasks}, zones: ${zones})`);
           persistentLog('Storage', 'Valid data in getItem, skipWrite preserved', 'DEBUG', { tasks, zones });
         } else {
-          // 数据为空，保持 skipWrite 锁为 true，防止空状态覆盖
-          // [DEBUG] console.log(`[Storage] getItem - Empty data, keeping skipWrite lock active`);
           persistentLog('Storage', 'Empty data in SQLite, skipWrite remains', 'DEBUG');
         }
 
-        // [DEBUG] console.log(`[Storage] getItem - Key: ${name}, Found: true, Tasks: ${tasks}, Zones: ${zones}`);
         return sqliteValue;
       }
 
-      // [DEBUG] console.log(`[Storage] getItem - Key: ${name}, Found: false`);
-      persistentLog('Storage', 'SQLite returned null', 'DEBUG');
+      // 🚀 SQLite 为空时，尝试从 localStorage 读取作为 fallback
+      const localValue = localStorage.getItem(name);
+      if (localValue) {
+        let tasks = 0, zones = 0;
+        try {
+          const parsed = JSON.parse(localValue);
+          tasks = parsed?.state?.tasks?.length || parsed?.tasks?.length || 0;
+          zones = parsed?.state?.zones?.length || parsed?.zones?.length || 0;
+        } catch (e) {}
+        _loadedTasksCount = tasks;
+        _loadedZonesCount = zones;
+        _previousDataSnapshot = { tasks, zones };
+        _hasReadValidData = tasks > 0 || zones > 0;
+        persistentLog('Storage', 'getItem fallback from localStorage', 'DEBUG', { tasks, zones, size: localValue.length });
+        return localValue;
+      }
+
+      // 数据为空，更新快照为 0，防止 skipWrite 锁死
+      _loadedTasksCount = 0;
+      _loadedZonesCount = 0;
+      _previousDataSnapshot = { tasks: 0, zones: 0 };
+      persistentLog('Storage', 'SQLite returned null, snapshot reset to empty', 'DEBUG');
       return null;
     } catch (error) {
-      // [DEBUG] console.log(`[Storage] getItem - Key: ${name}, ERROR: ${error}`);
       persistentLog('Storage', 'SQLite ERROR', 'ERROR', String(error));
+
+      // 🚀 SQLite 出错时，从 localStorage fallback
+      const localValue = localStorage.getItem(name);
+      if (localValue) {
+        let tasks = 0, zones = 0;
+        try {
+          const parsed = JSON.parse(localValue);
+          tasks = parsed?.state?.tasks?.length || parsed?.tasks?.length || 0;
+          zones = parsed?.state?.zones?.length || parsed?.zones?.length || 0;
+        } catch (e) {}
+        _loadedTasksCount = tasks;
+        _loadedZonesCount = zones;
+        _previousDataSnapshot = { tasks, zones };
+        _hasReadValidData = tasks > 0 || zones > 0;
+        persistentLog('Storage', 'getItem ERROR fallback from localStorage', 'WARN', { tasks, zones, size: localValue.length });
+        return localValue;
+      }
+
       return null;
     }
   },
@@ -296,11 +337,15 @@ export const sqliteStorage: StateStorage = {
         console.log('[Storage] Data unchanged, keeping skipWrite lock');
       }
     } else if (skipWrite && !_previousDataSnapshot) {
-      // 🚀 没有快照但 skipWrite 为 true
-      // 这种情况发生在刚切换完目录、还没有读取到数据时
-      // 必须阻止写入，直到读取到有效数据（由 getItem 清除锁）
-      console.warn('[Storage] BLOCKED - No data snapshot yet, waiting for hydration');
-      return;
+      if (valueTasks > 0 || valueZones > 0) {
+        console.log('[Storage] First data write detected, clearing skipWrite lock');
+        _skipWriteUntilChange = false;
+        _previousDataSnapshot = null;
+      } else {
+        // 🚀 没有快照且数据为空，阻止写入直到读取到有效数据
+        console.warn('[Storage] BLOCKED - No data snapshot yet, waiting for hydration');
+        return;
+      }
     }
 
     // 🚨 关键检查：如果曾经读取到有效数据，但现在写入的是空数据，这可能是状态被错误覆盖
@@ -321,25 +366,6 @@ export const sqliteStorage: StateStorage = {
       // ignore
     }
 
-    // 写入 localStorage（确保 changeDbPath 备份可以读取到正确数据）
-    // localStorage.setItem(name, value);
-    // persistentLog('Storage', 'setItem to localStorage', 'DEBUG');
-
-    // // 同时写入 SQLite
-    // try {
-    //   // 写入前再次检查路径是否匹配
-    //   const currentPath = localStorage.getItem('FOCUS_FLOW_DB_PATH');
-    //   const dbPath = await import('@/lib/db').then(m => m.getDbPath());
-    //   if (currentPath !== dbPath) {
-    //     console.error(`[Storage] ⚠️ PATH MISMATCH! localStorage: ${currentPath}, getDbPath: ${dbPath}`);
-    //     persistentLog('Storage', 'PATH MISMATCH!', 'ERROR', { localStoragePath: currentPath, dbPath });
-    //   }
-
-    //   await dbSetItem(name, value);
-    //   persistentLog('Storage', 'setItem SUCCESS', 'DEBUG');
-    // } catch (error) {
-    //   persistentLog('Storage', 'setItem SQLite ERROR', 'ERROR', String(error));
-    // }
     if (_writeDebounceTimeout) clearTimeout(_writeDebounceTimeout);
 
     _writeDebounceTimeout = setTimeout(async () => {
@@ -348,11 +374,11 @@ export const sqliteStorage: StateStorage = {
 
       // 2. 再写 SQLite (重量)
       try {
-        const currentPath = localStorage.getItem('FOCUS_FLOW_DB_PATH');
         const { getDbPath: fetchPath } = await import('@/lib/db');
         const dbPath = await fetchPath();
         
-        if (currentPath === dbPath) {
+        // 🚀 只要获取到了有效路径就写入（dbSetItem 内部还有会话级防御）
+        if (dbPath) {
           await dbSetItem(name, value);
           persistentLog('Storage', 'setItem SUCCESS (Debounced)', 'DEBUG');
         }
