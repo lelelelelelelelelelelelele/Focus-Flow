@@ -28,7 +28,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { TaskItem } from './TaskItem';
 import type { Task, TaskPriority, TaskUrgency, DeadlineType, Zone } from '@/types';
-import { convertDeadlineType, getInheritedDeadline, calculateRankScores } from '@/lib/urgency-utils';
+import { convertDeadlineType, sortTasksByMode } from '@/lib/urgency-utils';
 import { useAppStore } from '@/store';
 import { getFlattenedTasks, calculateNewPosition, type FlattenedTask } from '@/lib/tree-utils';
 import { useTranslation } from 'react-i18next';
@@ -275,56 +275,14 @@ export function TaskList({
       return getFlattenedTasks(tasks, zone?.id || null, focusedTaskId).filter(t => !t.completed);
     }
 
-    // Common sort function
-    const applySort = (tasksToSort: Task[]) => {
-      const priorityOrder: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
-
-      tasksToSort.sort((a, b) => {
-        switch (sortMode) {
-          case 'priority':
-            return priorityOrder[a.priority] - priorityOrder[b.priority];
-          case 'urgency':
-            const aDdl = getInheritedDeadline(a, tasks);
-            const bDdl = getInheritedDeadline(b, tasks);
-            if (!aDdl && !bDdl) return 0;
-            if (!aDdl) return 1;
-            if (!bDdl) return -1;
-            return aDdl - bDdl;
-          case 'workTime':
-            return (b.totalWorkTime || 0) - (a.totalWorkTime || 0);
-          case 'estimatedTime':
-            return (b.estimatedTime || 0) - (a.estimatedTime || 0);
-          case 'weighted': {
-            // 获取最新的全局设置权重（适配本地模式，没有单设局部权重时使用全局）
-            const state = useAppStore.getState();
-            const pWeight = state.settings.zoneViewSort?.priorityWeight ?? state.settings.globalViewSort?.priorityWeight ?? 0.6;
-            const dWeight = state.settings.zoneViewSort?.deadlineWeight ?? state.settings.globalViewSort?.deadlineWeight ?? 0.4;
-
-            // 使用归一化的优先级分数：高=1, 中=0.5, 低=0
-            const normPriorityA = (2 - priorityOrder[a.priority]) / 2;
-            const normPriorityB = (2 - priorityOrder[b.priority]) / 2;
-
-            const aEffective = getInheritedDeadline(a, tasks);
-            const bEffective = getInheritedDeadline(b, tasks);
-
-            // 使用 calculateRankScores 计算排名分数
-            const rankScores = calculateRankScores(tasks);
-            const aScoreDdl = aEffective ? (rankScores[a.id] || 0) : 0;
-            const bScoreDdl = bEffective ? (rankScores[b.id] || 0) : 0;
-
-            const aScore = normPriorityA * pWeight + aScoreDdl * dWeight;
-            const bScore = normPriorityB * pWeight + bScoreDdl * dWeight;
-
-            // 分数高的排在前面
-            if (bScore !== aScore) return bScore - aScore;
-            // 分数相同时，按实际 DDL（继承或自设）兜底
-            return (aEffective || Infinity) - (bEffective || Infinity);
-          }
-          default:
-            return 0;
-        }
-      });
+    // Common sort function（排序逻辑已抽到 urgency-utils.sortTasksByMode，便于单测）
+    // 权重适配本地模式：没有单设局部权重时回退全局，再回退默认 0.6/0.4。
+    const sortSettings = useAppStore.getState().settings;
+    const sortWeights = {
+      priorityWeight: sortSettings.zoneViewSort?.priorityWeight ?? sortSettings.globalViewSort?.priorityWeight ?? 0.6,
+      deadlineWeight: sortSettings.zoneViewSort?.deadlineWeight ?? sortSettings.globalViewSort?.deadlineWeight ?? 0.4,
     };
+    const applySort = (tasksToSort: Task[]) => sortTasksByMode(tasksToSort, sortMode, tasks, sortWeights);
 
     // 3. Scenario B: Pure leaf node mode (flatten all levels, only keep nodes without children)
     if (isLeafMode) {

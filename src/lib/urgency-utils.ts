@@ -1,4 +1,4 @@
-import type { Task, TaskPriority, TaskUrgency } from '../types';
+import type { Task, TaskPriority, TaskUrgency, GlobalViewSortMode } from '../types';
 import i18n from 'i18next';
 
 /**
@@ -249,6 +249,68 @@ export function sortTasks(
 
   // 无 DDL 的任务排在后面，保持原有顺序
   return [...sortedWithDeadline, ...withoutDeadline];
+}
+
+/**
+ * 按指定排序模式对任务列表排序（就地排序并返回，语义同 Array.sort）。
+ * 从 TaskList 的 applySort 抽出为纯函数，便于单测。
+ *
+ * - priority：高→中→低
+ * - urgency：按（继承）截止日期从早到晚，无截止排最后
+ * - workTime：累计工时降序
+ * - estimatedTime：预估时间降序
+ * - weighted：优先级权重 + 截止排名权重 的综合分数降序，同分按实际 DDL 兜底
+ * - 其它模式（manual/zone/timeDiff/deadline 等）：返回 0，保持传入顺序
+ *
+ * @param tasksToSort 待排序任务（会被就地修改）
+ * @param mode 排序模式
+ * @param allTasks 全量任务（用于截止日期继承与排名计算）
+ * @param weights weighted 模式下的权重，默认 0.6 / 0.4
+ */
+export function sortTasksByMode(
+  tasksToSort: Task[],
+  mode: GlobalViewSortMode,
+  allTasks: Task[],
+  weights?: { priorityWeight?: number; deadlineWeight?: number }
+): Task[] {
+  const priorityOrder: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
+  const pWeight = weights?.priorityWeight ?? 0.6;
+  const dWeight = weights?.deadlineWeight ?? 0.4;
+
+  tasksToSort.sort((a, b) => {
+    switch (mode) {
+      case 'priority':
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      case 'urgency': {
+        const aDdl = getInheritedDeadline(a, allTasks);
+        const bDdl = getInheritedDeadline(b, allTasks);
+        if (!aDdl && !bDdl) return 0;
+        if (!aDdl) return 1;
+        if (!bDdl) return -1;
+        return aDdl - bDdl;
+      }
+      case 'workTime':
+        return (b.totalWorkTime || 0) - (a.totalWorkTime || 0);
+      case 'estimatedTime':
+        return (b.estimatedTime || 0) - (a.estimatedTime || 0);
+      case 'weighted': {
+        const normPriorityA = (2 - priorityOrder[a.priority]) / 2;
+        const normPriorityB = (2 - priorityOrder[b.priority]) / 2;
+        const aEffective = getInheritedDeadline(a, allTasks);
+        const bEffective = getInheritedDeadline(b, allTasks);
+        const rankScores = calculateRankScores(allTasks);
+        const aScoreDdl = aEffective ? (rankScores[a.id] || 0) : 0;
+        const bScoreDdl = bEffective ? (rankScores[b.id] || 0) : 0;
+        const aScore = normPriorityA * pWeight + aScoreDdl * dWeight;
+        const bScore = normPriorityB * pWeight + bScoreDdl * dWeight;
+        if (bScore !== aScore) return bScore - aScore;
+        return (aEffective || Infinity) - (bEffective || Infinity);
+      }
+      default:
+        return 0;
+    }
+  });
+  return tasksToSort;
 }
 
 /**
