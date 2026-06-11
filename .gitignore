@@ -56,3 +56,4 @@ coverage/
 # generated test artifacts
 test-report.html
 test-results.json
+AGENTS.md

@@ -3,6 +3,7 @@ import { persist, createJSONStorage, type PersistOptions } from 'zustand/middlew
 import { sqliteStorage, setIsHydrated, onStoreReload, resetStorageState } from '@/lib/storage-adapter';
 import { persistentLog } from '@/lib/persistent-log';
 import { clearDbCache } from '@/lib/db';
+import { initFileMirror } from '@/lib/file-mirror';
 import { createUISlice, type UISlice } from './slices/uiSlice';
 import { createZoneSlice, type ZoneSlice } from './slices/zoneSlice';
 import { createTaskSlice, type TaskSlice } from './slices/taskSlice';
@@ -141,5 +142,7 @@ export function initStoreReloadHandler() {
 if (typeof window !== 'undefined') {
   setTimeout(() => {
     initStoreReloadHandler();
+    // 🚀 启动任务的本地 JSON 镜像层（双向同步 + cc 可编辑）
+    initFileMirror();
   }, 0);
 }
