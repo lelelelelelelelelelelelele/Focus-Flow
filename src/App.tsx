@@ -468,6 +468,25 @@ function App() {
     updateSettings({ collapsed: willCollapse });
   }, [settings.collapsed, updateSettings]);
 
+  // 🐛 修复：折叠态(collapsed=true)退出后重启时，窗口尺寸没有同步缩小，
+  // 导致折叠条被画在 750×650 大窗里、显示成一大片灰。
+  // 这里在挂载 / collapsed 变化时，把窗口尺寸同步到对应状态（缩放只在点击 toggle 时做过）。
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getCurrentWindow, LogicalSize } = await import('@tauri-apps/api/window');
+        const win = getCurrentWindow();
+        if (win.label !== 'main') return; // 只同步主窗口，避免影响浮窗
+        const size = settings.collapsed ? COLLAPSED_SIZE : NORMAL_SIZE;
+        if (!cancelled) await win.setSize(new LogicalSize(size.width, size.height));
+      } catch (e) {
+        console.error('同步折叠窗口尺寸失败:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [settings.collapsed]);
+
   const handleArchiveCurrent = useCallback((name: string, summary: string) => {
     const id = archiveCurrentWorkspace(name, summary);
     toast.success(t('toast.archived'), {
