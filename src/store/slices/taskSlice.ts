@@ -125,7 +125,8 @@ const updateParentEstimatedTime = (tasks: Task[], parentId: string): void => {
 };
 
 // 预计算所有任务的时间
-const computeAllTaskTimes = (tasks: Task[]): Record<string, TaskComputedTime> => {
+// 🚀 导出：file-mirror 外部导入任务后需要重算这份缓存
+export const computeAllTaskTimes = (tasks: Task[]): Record<string, TaskComputedTime> => {
   const computed: Record<string, TaskComputedTime> = {};
 
   // 先计算所有任务的 estimatedTime（自底向上）
