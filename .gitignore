@@ -52,3 +52,7 @@ Thumbs.db
 # ============================
 coverage/
 .nyc_output/
+
+# generated test artifacts
+test-report.html
+test-results.json
