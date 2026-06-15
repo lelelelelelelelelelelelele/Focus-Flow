@@ -196,8 +196,12 @@ export function TaskItem({
 
   const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
-      case 'high':
+      case 'critical':
+        return '#9f1239';
+      case 'urgent':
         return '#ef4444';
+      case 'high':
+        return '#f97316';
       case 'medium':
         return '#eab308';
       case 'low':
@@ -207,6 +211,10 @@ export function TaskItem({
 
   const getPriorityLabel = (priority: TaskPriority) => {
     switch (priority) {
+      case 'critical':
+        return t('task.priorityCritical');
+      case 'urgent':
+        return t('task.priorityUrgent');
       case 'high':
         return t('task.priorityHigh');
       case 'medium':
@@ -602,7 +610,7 @@ export function TaskItem({
         </button>
         {showPriorityMenu && (
           <div className="priority-menu">
-            {(['high', 'medium', 'low'] as TaskPriority[]).map((p) => (
+            {(['critical', 'urgent', 'high', 'medium', 'low'] as TaskPriority[]).map((p) => (
               <button
                 key={p}
                 className={`priority-option ${task.priority === p ? 'selected' : ''}`}
