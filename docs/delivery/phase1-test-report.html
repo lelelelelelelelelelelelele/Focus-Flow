@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Focus-Flow 测试报告</title>
+<style>
+  :root {
+    --bg:#0f1117; --card:#171a23; --card2:#1d212c; --line:#272c3a;
+    --txt:#e6e8ee; --muted:#9aa3b2; --green:#34d399; --red:#f87171; --amber:#fbbf24;
+    --accent:#818cf8;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:1040px; margin:0 auto; padding:32px 20px 64px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 24px; font-size:13px; }
+  .banner { display:flex; align-items:center; gap:14px; padding:18px 22px; border-radius:14px;
+    background:linear-gradient(135deg, #0c2e23,#10241f);
+    border:1px solid #1f5e49; margin-bottom:24px; }
+  .banner .icon { font-size:30px; }
+  .banner b { font-size:18px; color:var(--green); }
+  .cards { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:28px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .stat .n { font-size:26px; font-weight:700; }
+  .stat .l { color:var(--muted); font-size:12px; }
+  .stat.pass .n { color:var(--green); } .stat.fail .n { color:var(--red); }
+  .stat.rate .n { color:var(--accent); }
+  .bar { height:8px; border-radius:6px; background:var(--card2); overflow:hidden; margin:0 0 28px; display:flex; }
+  .bar i { display:block; height:100%; }
+  .bar .g { background:var(--green); } .bar .r { background:var(--red); } .bar .s { background:var(--amber); }
+  section.file { background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:14px; overflow:hidden; }
+  section.file.has-fail { border-color:#7f2a2a; }
+  .file-head { display:flex; align-items:center; gap:10px; padding:14px 18px; cursor:pointer; user-select:none; }
+  .file-head:hover { background:var(--card2); }
+  .chevron { color:var(--muted); transition:transform .15s; font-size:12px; }
+  section.file.collapsed .chevron { transform:rotate(-90deg); }
+  section.file.collapsed .groups, section.file.collapsed .feature { display:none; }
+  .file-name { font-weight:600; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
+  .file-meta { margin-left:auto; display:flex; gap:10px; font-size:12px; }
+  .count.ok { color:var(--green); } .count.bad { color:var(--red); } .count.muted { color:var(--muted); }
+  .feature { margin:0; padding:0 18px 12px; color:var(--muted); font-size:12.5px; }
+  .groups { padding:4px 18px 16px; }
+  .group { border-top:1px solid var(--line); padding:12px 0 4px; }
+  .group h4 { margin:0 0 8px; font-size:13px; color:#c7cdda; }
+  .group ul { list-style:none; margin:0; padding:0; }
+  .group li { display:flex; align-items:center; gap:10px; padding:5px 0; flex-wrap:wrap; }
+  .group li.failed { background:rgba(248,113,113,.06); border-radius:6px; padding:6px 8px; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:20px; font-weight:600; white-space:nowrap; }
+  .pill.pass { background:rgba(52,211,153,.14); color:var(--green); }
+  .pill.fail { background:rgba(248,113,113,.16); color:var(--red); }
+  .pill.skip { background:rgba(251,191,36,.16); color:var(--amber); }
+  .t-title { flex:1 1 auto; }
+  .t-dur { font-size:11px; }
+  .muted { color:var(--muted); }
+  .fail-msg { flex-basis:100%; background:#1a0e0e; border:1px solid #5a2020; color:#fca5a5;
+    padding:10px 12px; border-radius:8px; font-size:12px; overflow:auto; margin:6px 0 0; white-space:pre-wrap; }
+  footer { color:var(--muted); font-size:12px; text-align:center; margin-top:32px; }
+  .toolbar { display:flex; gap:10px; margin-bottom:14px; }
+  .toolbar button { background:var(--card2); color:var(--txt); border:1px solid var(--line);
+    border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px; }
+  .toolbar button:hover { border-color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Focus-Flow · 自动化测试报告</h1>
+  <p class="sub">vitest  · 运行时间 2026/6/19 01:23:00 · 总耗时 363.1ms</p>
+
+  <div class="banner">
+    <span class="icon">✅</span>
+    <div>
+      <b>全部通过</b>
+      <div class="muted">45/45 用例通过 · 通过率 100.0%</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="stat"><div class="n">45</div><div class="l">用例总数</div></div>
+    <div class="stat pass"><div class="n">45</div><div class="l">通过</div></div>
+    <div class="stat fail"><div class="n">0</div><div class="l">失败</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">测试文件</div></div>
+    <div class="stat rate"><div class="n">100.0%</div><div class="l">通过率</div></div>
+  </div>
+
+  <div class="bar">
+    <i class="g" style="width:100%"></i>
+    <i class="r" style="width:0%"></i>
+    <i class="s" style="width:0%"></i>
+  </div>
+
+  <div class="toolbar">
+    <button onclick="document.querySelectorAll('section.file').forEach(s=>s.classList.remove('collapsed'))">全部展开</button>
+    <button onclick="document.querySelectorAll('section.file').forEach(s=>s.classList.add('collapsed'))">全部折叠</button>
+  </div>
+
+  
+  <section class="file ">
+    <header class="file-head" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span class="chevron">▾</span>
+      <span class="file-name">src\lib\file-mirror-core.test.ts</span>
+      <span class="file-meta">
+        <span class="count ok">16 通过</span>
+        
+        
+        <span class="count muted">10.1ms</span>
+      </span>
+    </header>
+    <p class="feature">覆盖能力：文件镜像内核：回声锁不变量（canonical）、镜像解析、启动/轮询动作决策</p>
+    <div class="groups">
+      
+        <div class="group">
+          <h4>canonical（回声锁不变量） <span class="muted">(4)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">忽略数组顺序</span>
+                <span class="t-dur muted">7.7ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">忽略对象键序</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">字段变化 → canonical 变化</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">增删任务 → canonical 变化</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>parseMirror（拒绝损坏数据） <span class="muted">(4)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">解析合法文件</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">非法 JSON → null</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">缺 tasks/zones 数组 → null</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">序列化→解析往返不丢数据</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>decideBootAction（启动谁为准） <span class="muted">(5)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">文件缺失 → export（初始化）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">护栏：空文件 + 非空 store → export（不让空文件覆盖好数据）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">文件与 store 不一致 → import（文件为准，含离线编辑）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">文件与 store 一致（忽略顺序）→ noop</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">store 与文件都为空 → noop（合法的全空）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>decidePollAction（轮询是否导入） <span class="muted">(3)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">文件为 null → noop</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">文件 == 基线 → noop（回声锁）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">文件 != 基线 → import</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+    </div>
+  </section>
+  <section class="file ">
+    <header class="file-head" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span class="chevron">▾</span>
+      <span class="file-name">src\lib\nlp-edit\apply-core.test.ts</span>
+      <span class="file-meta">
+        <span class="count ok">17 通过</span>
+        
+        
+        <span class="count muted">4.1ms</span>
+      </span>
+    </header>
+    <p class="feature">覆盖能力：BYOK NLP 编辑内核：op 校验 + action 计划 + diff 预览（增/改/删）、未知 id/zoneId/parentId 拦截、删除级联展开、op 上限、坏 op 全否决（fail-fast）</p>
+    <div class="groups">
+      
+        <div class="group">
+          <h4>planOps · add_task（happy path） <span class="muted">(2)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">合法 add → plan + added 预览 + add action</span>
+                <span class="t-dur muted">1.2ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">add 到已存在 parent → 合法</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · update_task（happy path） <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">partial 更新 → 仅携带改动字段（不含 id/op）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · delete_task（happy path + 级联） <span class="muted">(3)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">删叶子 → removedIds 仅自身，cascadeCount 0</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">删父 → 级联展开整棵子树，cascadeCount 反映额外删除数</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">删父+子重叠 → removedIds 去重，不重复计数</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · 混合 op <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">add+update+delete 同批 → actions 顺序保持</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · 护栏 · 空 ops <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">空数组 → noop（合法，不落地）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · 护栏 · 未知 id <span class="muted">(2)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">update 未知 id → UNKNOWN_TASK_ID</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">delete 未知 id → UNKNOWN_TASK_ID（不静默跳过）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · 护栏 · 未知 zoneId <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">add 到不存在 zone → UNKNOWN_ZONE_ID</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · 护栏 · 未知 parentId <span class="muted">(3)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">add 到不存在 parent → UNKNOWN_PARENT_ID</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">update 设到不存在 parent → UNKNOWN_PARENT_ID</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">parentId 显式 null 合法（顶级任务）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · 护栏 · op 数量上限 <span class="muted">(2)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">&gt; OP_LIMIT(50) → OP_LIMIT_EXCEEDED</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">== OP_LIMIT(50) → 合法</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>planOps · fail-fast <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">第 2 个 op 出错 → opIndex=1，不返回部分计划</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+    </div>
+  </section>
+  <section class="file ">
+    <header class="file-head" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span class="chevron">▾</span>
+      <span class="file-name">src\lib\nlp-edit\schema.test.ts</span>
+      <span class="file-meta">
+        <span class="count ok">12 通过</span>
+        
+        
+        <span class="count muted">3.3ms</span>
+      </span>
+    </header>
+    <p class="feature">覆盖能力：BYOK NLP 编辑 op 的 JSON Schema：add/update/delete 三类，priority/deadlineType 枚举锁死、additionalProperties:false 防越权、urgency 不可设（派生量）</p>
+    <div class="groups">
+      
+        <div class="group">
+          <h4>枚举值锁死 <span class="muted">(3)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">op 三种且仅三种</span>
+                <span class="t-dur muted">1.0ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">priority 锁 low|medium|high</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">deadlineType 锁 exact|today|tomorrow|week|none</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>EDIT_OPS_PARAMETERS（function parameters 契约） <span class="muted">(7)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">顶层是 object，ops 为 array</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">ops.items 用 oneOf 锁三种 op 分支</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">每个分支 additionalProperties:false（防 LLM 夹带越权字段）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">三种 op 都不暴露 urgency（urgency 是派生显示值）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">add_task：zoneId+title 必填，priority/deadlineType 锁枚举</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">update_task：仅 id 必填（partial 更新）</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">delete_task：仅 id</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>EDIT_OPS_FUNCTION（tool 定义） <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">带 name / description / parameters</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+        <div class="group">
+          <h4>EditOp 类型联合 <span class="muted">(1)</span></h4>
+          <ul>
+            
+              <li class="passed">
+                <span class="pill pass">通过</span>
+                <span class="t-title">三种 op 字面量都可构造</span>
+                <span class="t-dur muted"><1ms</span>
+                
+              </li>
+          </ul>
+        </div>
+    </div>
+  </section>
+
+  <footer>由 scripts/gen-test-report.mjs 基于 vitest JSON 结果生成 · 2026/6/19 01:23:00</footer>
+</div>
+</body>
+</html>
