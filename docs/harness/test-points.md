@@ -13,13 +13,13 @@
 | TP4 | 报告受众 = 我自己（非上游 maintainer） | 受众纠偏 | `covered-now` | — | phase1-nlp-core §0 受众 / §8 | — |
 | TP5 | 验证环境口径（sandbox / CI 测试在哪算数） | Episode#1 D1/D2 | `known-gap` | CI 当前**无** vitest 步 | byok-plan-v2 §7 待补 verification_env | — |
 | TP6 | 子任务 / 移动 / 删子树（父**已存在**） | 树提问 | `covered-now` | apply-core.test（happy + 护栏，已有） | — | phase1-io-contract 协议层 |
-| TP7 | 一次性建**新多层树**（新父 + 新子） | Episode#2 | `known-gap` | apply-core.test 新增「已知缺口」块（钉当前 UNKNOWN_PARENT_ID）+ `it.todo` T1 | phase1-nlp-core 已知限制 | phase1-io-contract 边界缺口 |
-| TP8 | diff 预览**必须显父任务名**（防静默错挂） | Episode#2 T2 | `known-gap`（**必做，与建树无关**） | `it.todo` T2 | phase1-nlp-core 已知限制 | phase1-io-contract 边界缺口 |
+| TP7 | 一次性建**新多层树**（新父 + 新子） | Episode#2 / 人工 ratify | `covered-now`（核心层）· wiring `deferred-Phase3` | apply-core.test「建新树 tempId」块（plan + parentLabel） | phase1-nlp-core 树/子任务状态 | phase1-io-contract 协议层 |
+| TP8 | diff 预览**必须显父任务名**（防静默错挂） | Episode#2 T2 | `covered-now` | 同上（parentLabel 断言） | phase1-nlp-core | phase1-io-contract |
 | TP9 | re-parent **环 / 深度守护** | Episode#2 T3 | `known-gap` | `it.todo` T3 | — | phase1-io-contract 边界缺口 |
 
 ## 闭环说明
 
-- **TP7/TP8/TP9** 是本轮 worked-example：已在 test（known-gap 块 + todo）、report（已知限制）、架构边界（io-contract 缺口标注）三处落地，作为「人指定测试点 → 三处可见」的可复制样板。
-- **TP8 最优先**：无论建新树这条做不做，diff 显父名都得做——它是防 LLM 静默错挂（把新子任务挂到错父、护栏放行）的最后防线。
+- **TP7/TP8 已闭环（核心层）**：人 ratify「一句话建新树」是真需求后实现——add_task 加 tempId 批内引用（建新树）+ AddedPreview.parentLabel（diff 显父名，防静默错挂）。core 层测试绿；**app 内真正落地 = TP7 的 Phase 3 wiring（addTask 回传真 id）尚未做**。
+- **TP9 仍开**：re-parent 环检测未做（it.todo）。
 - **TP5** 待并入 byok-plan-v2 §0/§7（verification_env 口径）。
-- 新测试点随人追问继续往表里加。
+- 新测试点随人追问继续往表里加；本批是「人指定测试点 → test/report/架构边界三处可见 + 闭环」的可复制样板。
