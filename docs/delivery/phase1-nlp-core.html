@@ -68,9 +68,9 @@
     <tr><th>Intent</th><td>BYOK NLP 编辑的纯逻辑地基：把自然语言 op 校验成可落地的 action 计划 + diff 预览。</td></tr>
     <tr><th>Change</th><td>新增 4 文件 <code>src/lib/nlp-edit/{schema,apply-core,schema.test,apply-core.test}.ts</code>。<code>git diff HEAD</code> 为空 = <b class="ok">零现有文件改动</b>。</td></tr>
     <tr><th>Boundary impact</th><td><b class="ok">本期无新边界风险</b>：纯逻辑，无网络、无 key、无新权限、无新依赖。<span class="muted">（plan 里那条 <code>app→外部HTTP</code> 新边 + 明文 key 属 Phase 0/2，不在本期——照实说明，不提前背锅。）</span></td></tr>
-    <tr><th>Evidence</th><td><code>vitest</code> <b class="ok">45/45 真绿</b>（baseline 16 + 新测试 29），<code>tsc --noEmit</code> 干净；8 条护栏全有真断言；3 镜头对抗验证（真值✅/边界✅/真跑为 sandbox 假阴性，已 harness 亲跑裁决）。<b>证据是测试，非截图</b>——见下「实测证据」与「页面截图」两节。</td></tr>
+    <tr><th>Evidence</th><td><code>vitest</code> <b class="ok">全量 152/152 真绿</b>（其中 nlp-edit 模块 38；树/环扩展后），<code>tsc --noEmit</code> 干净；护栏全有真断言；3 镜头对抗验证（真值✅/边界✅/真跑为 sandbox 假阴性，已 harness 亲跑裁决）。<b>证据是测试，非截图</b>——见下「实测证据」与「页面截图」两节。</td></tr>
     <tr><th>Verdict</th><td><b class="ok">Ready</b>，前提是下面 2 条口径你认。地基正确、纯、可测、风格同作者。</td></tr>
-    <tr><th>Residual risk</th><td>① 测试「绿」依赖关闭 sandbox（真实环境真绿，但 CI 无 vitest 步）；② <code>INVALID_OP</code> 防御分支无测试（低）；③ node_modules 初始缺 jsdom（低）。</td></tr>
+    <tr><th>Residual risk</th><td>① 测试「绿」依赖关闭 sandbox（真实环境真绿，但 CI 无 vitest 步，= TP5 待并入 plan）；② node_modules 初始缺 jsdom（低）。<span class="muted">（原「INVALID_OP 无测试」已补测试关闭。）</span></td></tr>
   </table>
 
   <h2>你需要决定的（2 条口径，按守则该你拍）</h2>
@@ -86,9 +86,9 @@
 
   <h2>实测证据（本期可拿出的）</h2>
   <div class="ev">
-    <div class="big">45/45</div>
+    <div class="big">152/152</div>
     <div>
-      <div>vitest 真实管线 · 0 失败 · file-mirror baseline 16 + nlp-edit 29</div>
+      <div>vitest 真实管线 · 0 失败 · 全量 152（nlp-edit 模块 38：含建新树 / parentLabel / 环守护）</div>
       <div><a href="./phase1-test-report.html">→ 打开完整测试报告 phase1-test-report.html</a>（含每条用例 + 覆盖能力说明）</div>
     </div>
   </div>
@@ -97,9 +97,9 @@
   <h2>逻辑相的可视化 = I/O 契约（双用：证据 + 架构边界）</h2>
   <p class="note">纯逻辑没有页面，但它是 LLM 对话功能的起点。所以这里画的是<b>这块的 I/O 契约</b>而非 UI：形态层（像将来 diff 预览）→ 原始数据（ops 进 / PlanResult 出）→ 协议层（边界）。对纯逻辑模块，<b>I/O + 协议就是它的架构边界</b>，无需另画依赖图。</p>
   <div class="ev" style="border-color:#3b3f6e;">
-    <div class="big" style="color:var(--accent);">9 例</div>
+    <div class="big" style="color:var(--accent);">12 例</div>
     <div>
-      <div>真实 <code>planOps</code> 跑 fixture 的输出（非手写）：含级联删除爆炸半径、4 类护栏拦截、空操作</div>
+      <div>真实 <code>planOps</code> 跑 fixture 的输出（非手写）：含级联删除爆炸半径、建新树、成环拦截、各类护栏、空操作</div>
       <div><a href="./phase1-io-contract.html">→ 打开 I/O 契约 &amp; 架构边界 phase1-io-contract.html</a></div>
     </div>
   </div>
@@ -123,7 +123,7 @@
     <li><b class="ok">对已有任务的子任务操作可用</b>：加子任务 / 移动 / 拆分 / 删子树（父已存在）——真测 Qwen3.5 全对。</li>
     <li><b class="ok">一次性建新多层树：核心层已支持</b>（TP7）：add_task 加 tempId 批内引用。⚠ app 内真正落地还需 Phase 3 wiring（创建函数回传新 id）。</li>
     <li><b class="ok">静默错挂已堵</b>（TP8）：diff 预览显示「挂到「X」下」/「新建:X」，错挂一眼可见。详见 <a href="./phase1-io-contract.html">I/O 契约</a>。</li>
-    <li><b class="warn">仍开</b>：re-parent 环守护未做（TP9）。</li>
+    <li><b class="ok">环守护已加</b>（TP9）：把任务挂到自身/自身子孙下 → <code>CYCLE</code>，不静默成环。</li>
   </ul>
 
   <h2>不在本期（已知边界）</h2>

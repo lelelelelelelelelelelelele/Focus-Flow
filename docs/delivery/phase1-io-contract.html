@@ -35,7 +35,7 @@
     对纯逻辑模块，<b>I/O + 协议 就是它的架构边界</b>，无需另画依赖图。
   </div>
 
-  <h2>① 形态层 + 详情层：真实 I/O（11 例）</h2>
+  <h2>① 形态层 + 详情层：真实 I/O（12 例）</h2>
   
   <section class="card">
     <div class="card-h">
@@ -442,6 +442,33 @@
   </section>
   <section class="card">
     <div class="card-h">
+      <span class="label">护栏 · 成环 re-parent ❌（TP9）</span>
+      <span class="nl">“把「项目A」挪到它自己的子任务「画线框」下”</span>
+    </div>
+    <div class="ov err">✗ <b>CYCLE</b> <span class="muted">@op[0]</span><div class="msg">不能把「项目A」挂到它自己或其子孙下</div></div>
+    <details>
+      <summary>原始数据态（输入 ops → PlanResult 输出）</summary>
+      <div class="raw">
+        <div><div class="raw-t">输入 ops（fixture，模拟 LLM 产出）</div><pre>[
+  {
+    &quot;op&quot;: &quot;update_task&quot;,
+    &quot;id&quot;: &quot;t-proj&quot;,
+    &quot;parentId&quot;: &quot;t-wire&quot;
+  }
+]</pre></div>
+        <div><div class="raw-t">apply-core 真实输出 PlanResult</div><pre>{
+  &quot;kind&quot;: &quot;error&quot;,
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;CYCLE&quot;,
+    &quot;message&quot;: &quot;不能把「项目A」挂到它自己或其子孙下&quot;,
+    &quot;opIndex&quot;: 0
+  }
+}</pre></div>
+      </div>
+    </details>
+  </section>
+  <section class="card">
+    <div class="card-h">
       <span class="label">护栏 · 未知任务 id</span>
       <span class="nl">“改一个不存在的任务”</span>
     </div>
@@ -577,16 +604,16 @@
   </ul>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">错误码（协议保证拦截的越界）</h3>
-  <p><code>OP_LIMIT_EXCEEDED</code> · <code>UNKNOWN_TASK_ID</code> · <code>UNKNOWN_ZONE_ID</code> · <code>UNKNOWN_PARENT_ID</code> · <code>DUPLICATE_TEMP_ID</code> · <code>INVALID_OP</code></p>
+  <p><code>OP_LIMIT_EXCEEDED</code> · <code>UNKNOWN_TASK_ID</code> · <code>UNKNOWN_ZONE_ID</code> · <code>UNKNOWN_PARENT_ID</code> · <code>DUPLICATE_TEMP_ID</code> · <code>CYCLE</code> · <code>INVALID_OP</code></p>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">边界另一半：forbidden（这块绝不碰）</h3>
   <p class="muted">纯函数：不碰 store / fs / 网络 / 命令；不修改入参 snapshot；副作用（真调 store action + saveSnapshot）留在 wiring 层。→ 与 byok-plan-v2 §4 boundary rules 一致。</p>
 
-  <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">边界缺口（known-gap · 见 docs/harness/test-points.md）</h3>
+  <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">树/层级边界（原 known-gap，现已覆盖 · 见 docs/harness/test-points.md）</h3>
   <ul>
     <li><b>TP7 一次性建新多层树 ✅ 已支持（核心层）</b>：add_task 加 tempId、子 op 用 parentId 引用（见上「建新树·tempId」例）。⚠ app 内真正落地还需 Phase 3 wiring（addTask 回传真 id）。</li>
     <li><b>TP8 diff 显父名 ✅</b>：added 带 parentLabel（已有父=名字、新父=「新建:X」），形态层显示「挂到 X 下」→ 防 LLM 静默错挂。</li>
-    <li><b>TP9 re-parent 无环守护 ❌ 仍开</b>：把父挪到自己子孙下会成环；apply-core 现在只查 parentId 存在，无环/深度检测。</li>
+    <li><b>TP9 re-parent 环守护 ✅</b>：把任务挂到自身/自身子孙下 → <code>CYCLE</code>（见上「成环 re-parent」例）。tempId 新父是新叶子，不参与既有环判定。</li>
   </ul>
 
   <footer>apply-core I/O 契约 & 架构边界 · 真实 planOps 输出 · 形态/原始/协议 三层 · 2026-06-14</footer>

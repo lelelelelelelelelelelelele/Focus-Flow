@@ -55,6 +55,7 @@ const FIXTURES = [
   { label: '一句话多步', nl: '加个「发周报」，把修bug设高优，删掉买菜', ops: [{ op: 'add_task', zoneId: 'z-work', title: '发周报' }, { op: 'update_task', id: 't-bug', priority: 'high' }, { op: 'delete_task', id: 't-shop' }] },
   { label: '子任务 · 挂到已存在父 ✅', nl: '给「项目A」加子任务「写测试」', ops: [{ op: 'add_task', zoneId: 'z-work', title: '写测试', parentId: 't-proj' }] },
   { label: '建新树 · tempId 批内引用 ✅（TP7/T1）', nl: '新建项目「上线」，下面加「部署」「回归」', ops: [{ op: 'add_task', zoneId: 'z-work', title: '上线', tempId: 'u1' }, { op: 'add_task', zoneId: 'z-work', title: '部署', parentId: 'u1' }, { op: 'add_task', zoneId: 'z-work', title: '回归', parentId: 'u1' }] },
+  { label: '护栏 · 成环 re-parent ❌（TP9）', nl: '把「项目A」挪到它自己的子任务「画线框」下', ops: [{ op: 'update_task', id: 't-proj', parentId: 't-wire' }] },
   { label: '护栏 · 未知任务 id', nl: '改一个不存在的任务', ops: [{ op: 'update_task', id: 't-nope', title: 'x' }] },
   { label: '护栏 · 未知分区', nl: '往不存在的分区加任务', ops: [{ op: 'add_task', zoneId: 'z-nope', title: 'x' }] },
   { label: '护栏 · 空操作', nl: '（模型没产出任何 op）', ops: [] },
@@ -171,16 +172,16 @@ const html = `<!doctype html>
   </ul>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">错误码（协议保证拦截的越界）</h3>
-  <p><code>OP_LIMIT_EXCEEDED</code> · <code>UNKNOWN_TASK_ID</code> · <code>UNKNOWN_ZONE_ID</code> · <code>UNKNOWN_PARENT_ID</code> · <code>DUPLICATE_TEMP_ID</code> · <code>INVALID_OP</code></p>
+  <p><code>OP_LIMIT_EXCEEDED</code> · <code>UNKNOWN_TASK_ID</code> · <code>UNKNOWN_ZONE_ID</code> · <code>UNKNOWN_PARENT_ID</code> · <code>DUPLICATE_TEMP_ID</code> · <code>CYCLE</code> · <code>INVALID_OP</code></p>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">边界另一半：forbidden（这块绝不碰）</h3>
   <p class="muted">纯函数：不碰 store / fs / 网络 / 命令；不修改入参 snapshot；副作用（真调 store action + saveSnapshot）留在 wiring 层。→ 与 byok-plan-v2 §4 boundary rules 一致。</p>
 
-  <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">边界缺口（known-gap · 见 docs/harness/test-points.md）</h3>
+  <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">树/层级边界（原 known-gap，现已覆盖 · 见 docs/harness/test-points.md）</h3>
   <ul>
     <li><b>TP7 一次性建新多层树 ✅ 已支持（核心层）</b>：add_task 加 tempId、子 op 用 parentId 引用（见上「建新树·tempId」例）。⚠ app 内真正落地还需 Phase 3 wiring（addTask 回传真 id）。</li>
     <li><b>TP8 diff 显父名 ✅</b>：added 带 parentLabel（已有父=名字、新父=「新建:X」），形态层显示「挂到 X 下」→ 防 LLM 静默错挂。</li>
-    <li><b>TP9 re-parent 无环守护 ❌ 仍开</b>：把父挪到自己子孙下会成环；apply-core 现在只查 parentId 存在，无环/深度检测。</li>
+    <li><b>TP9 re-parent 环守护 ✅</b>：把任务挂到自身/自身子孙下 → <code>CYCLE</code>（见上「成环 re-parent」例）。tempId 新父是新叶子，不参与既有环判定。</li>
   </ul>
 
   <footer>apply-core I/O 契约 & 架构边界 · 真实 planOps 输出 · 形态/原始/协议 三层 · 2026-06-14</footer>

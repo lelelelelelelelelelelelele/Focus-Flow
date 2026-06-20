@@ -15,11 +15,11 @@
 | TP6 | 子任务 / 移动 / 删子树（父**已存在**） | 树提问 | `covered-now` | apply-core.test（happy + 护栏，已有） | — | phase1-io-contract 协议层 |
 | TP7 | 一次性建**新多层树**（新父 + 新子） | Episode#2 / 人工 ratify | `covered-now`（核心层）· wiring `deferred-Phase3` | apply-core.test「建新树 tempId」块（plan + parentLabel） | phase1-nlp-core 树/子任务状态 | phase1-io-contract 协议层 |
 | TP8 | diff 预览**必须显父任务名**（防静默错挂） | Episode#2 T2 | `covered-now` | 同上（parentLabel 断言） | phase1-nlp-core | phase1-io-contract |
-| TP9 | re-parent **环 / 深度守护** | Episode#2 T3 | `known-gap` | `it.todo` T3 | — | phase1-io-contract 边界缺口 |
+| TP9 | re-parent **环 / 深度守护** | Episode#2 T3 | `covered-now` | apply-core.test（CYCLE：自身/子孙 + 合法反例） | phase1-nlp-core 树/子任务状态 | phase1-io-contract「成环」例 |
 
 ## 闭环说明
 
 - **TP7/TP8 已闭环（核心层）**：人 ratify「一句话建新树」是真需求后实现——add_task 加 tempId 批内引用（建新树）+ AddedPreview.parentLabel（diff 显父名，防静默错挂）。core 层测试绿；**app 内真正落地 = TP7 的 Phase 3 wiring（addTask 回传真 id）尚未做**。
-- **TP9 仍开**：re-parent 环检测未做（it.todo）。
+- **TP9 已闭环**：re-parent 到自身/自身子孙 → CYCLE（含「挪到非子孙合法」反例）。同批补了 INVALID_OP 防御分支测试（关掉交付报告残余风险②）。
 - **TP5** 待并入 byok-plan-v2 §0/§7（verification_env 口径）。
 - 新测试点随人追问继续往表里加；本批是「人指定测试点 → test/report/架构边界三处可见 + 闭环」的可复制样板。
