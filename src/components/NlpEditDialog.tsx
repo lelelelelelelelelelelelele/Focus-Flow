@@ -34,7 +34,7 @@ function formatProviderError(e: ProviderError, t: (k: string, o?: Record<string,
   return `${t('nlp.errorTitle')}：${e.message}`;
 }
 
-function changeSummary(changes: Partial<Task>, _titleById: Map<string, string>): string {
+function changeSummary(changes: Partial<Task>): string {
   return Object.entries(changes)
     .filter(([k]) => k !== 'parentId') // parentId（重挂父）单独用解析后的父任务名展示
     .map(([k, v]) => {
@@ -196,7 +196,7 @@ export function NlpEditDialog({ zones, tasks, onApply, providerFactory = createA
                       <Pencil size={14} /> {t('nlp.updated')} · {plan.diff.updated.length}
                     </h4>
                     {plan.diff.updated.map((u, i) => {
-                      const summary = changeSummary(u.changes, titleById);
+                      const summary = changeSummary(u.changes);
                       return (
                         <div key={i} data-testid="nlp-updated" className="flex flex-wrap items-center gap-1 pl-4">
                           <span className="font-medium">{titleById.get(u.id) ?? u.id}</span>

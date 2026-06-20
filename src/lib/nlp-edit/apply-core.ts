@@ -269,8 +269,9 @@ export function planOps(
         }
       }
       // 只取 op 携带的可改字段，剥掉 op / id。
-      const { op: _op, id: _id, ...rest } = u;
-      const changes = rest as Partial<Omit<Task, 'id'>>;
+      const changes = Object.fromEntries(
+        Object.entries(u).filter(([k]) => k !== 'op' && k !== 'id'),
+      ) as Partial<Omit<Task, 'id'>>;
       actions.push({ kind: 'update', id: u.id, updates: changes as Partial<Task> });
       const preview: UpdatedPreview = { id: u.id, changes };
       // 重挂父：解析父任务可读名（含批内 tempId 新父），让预览能看出挂到谁下（TP8 扩到 update）。
