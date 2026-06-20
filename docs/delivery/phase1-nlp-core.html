@@ -118,11 +118,12 @@
     <li><b>补 CI gate 现实</b>：<code>.github/workflows/build.yml</code> 当前<b class="bad">没有</b> vitest 步骤，plan §7 依赖的 CI 门并不存在——要么接上，要么把 gate 改成「本地真跑」。</li>
   </ul>
 
-  <h2>已知限制 · 树/子任务（Episode#2 真测 · 见 test-points TP7-9）</h2>
+  <h2>树/子任务 · 状态（Episode#2 真测 + 已实现 · 见 test-points TP7-9）</h2>
   <ul>
     <li><b class="ok">对已有任务的子任务操作可用</b>：加子任务 / 移动 / 拆分 / 删子树（父已存在）——真测 Qwen3.5 全对。</li>
-    <li><b class="bad">一次性建新多层树不可用，且会静默错挂</b>：新父落地前无 id，LLM 把新子任务挂到已存在的错父上、所有护栏放行（TP7）。</li>
-    <li><b class="warn">必做缓解</b>：diff 预览须显父任务名，否则错挂看不见（TP8）；re-parent 需环守护（TP9）。详见 <a href="./phase1-io-contract.html">I/O 契约 · 边界缺口</a>。</li>
+    <li><b class="ok">一次性建新多层树：核心层已支持</b>（TP7）：add_task 加 tempId 批内引用。⚠ app 内真正落地还需 Phase 3 wiring（创建函数回传新 id）。</li>
+    <li><b class="ok">静默错挂已堵</b>（TP8）：diff 预览显示「挂到「X」下」/「新建:X」，错挂一眼可见。详见 <a href="./phase1-io-contract.html">I/O 契约</a>。</li>
+    <li><b class="warn">仍开</b>：re-parent 环守护未做（TP9）。</li>
   </ul>
 
   <h2>不在本期（已知边界）</h2>

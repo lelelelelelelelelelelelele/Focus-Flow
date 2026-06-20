@@ -54,7 +54,7 @@ const FIXTURES = [
   { label: '删父任务（级联爆炸半径）', nl: '把「项目A」整个删掉', ops: [{ op: 'delete_task', id: 't-proj' }] },
   { label: '一句话多步', nl: '加个「发周报」，把修bug设高优，删掉买菜', ops: [{ op: 'add_task', zoneId: 'z-work', title: '发周报' }, { op: 'update_task', id: 't-bug', priority: 'high' }, { op: 'delete_task', id: 't-shop' }] },
   { label: '子任务 · 挂到已存在父 ✅', nl: '给「项目A」加子任务「写测试」', ops: [{ op: 'add_task', zoneId: 'z-work', title: '写测试', parentId: 't-proj' }] },
-  { label: '建新树 · 批内新父 ❌（已知缺口 TP7）', nl: '新建项目「上线」，下面加「部署」', ops: [{ op: 'add_task', zoneId: 'z-work', title: '上线' }, { op: 'add_task', zoneId: 'z-work', title: '部署', parentId: '上线' }] },
+  { label: '建新树 · tempId 批内引用 ✅（TP7/T1）', nl: '新建项目「上线」，下面加「部署」「回归」', ops: [{ op: 'add_task', zoneId: 'z-work', title: '上线', tempId: 'u1' }, { op: 'add_task', zoneId: 'z-work', title: '部署', parentId: 'u1' }, { op: 'add_task', zoneId: 'z-work', title: '回归', parentId: 'u1' }] },
   { label: '护栏 · 未知任务 id', nl: '改一个不存在的任务', ops: [{ op: 'update_task', id: 't-nope', title: 'x' }] },
   { label: '护栏 · 未知分区', nl: '往不存在的分区加任务', ops: [{ op: 'add_task', zoneId: 'z-nope', title: 'x' }] },
   { label: '护栏 · 空操作', nl: '（模型没产出任何 op）', ops: [] },
@@ -72,7 +72,7 @@ function overview(r) {
   if (r.kind === 'noop') return `<div class="ov noop">∅ 空操作 · 合法但不落地</div>`;
   if (r.kind === 'error') return `<div class="ov err">✗ <b>${esc(r.error.code)}</b> <span class="muted">@op[${r.error.opIndex}]</span><div class="msg">${esc(r.error.message)}</div></div>`;
   const lines = [];
-  for (const a of r.diff.added) lines.push(`<div class="line add">+ 新增「${esc(a.title)}」<span class="muted">（${esc(zoneNameOf(a.zoneId))}${a.parentId ? ' · 子任务' : ''}）</span></div>`);
+  for (const a of r.diff.added) lines.push(`<div class="line add">+ 新增「${esc(a.title)}」<span class="muted">（${esc(zoneNameOf(a.zoneId))}${a.parentLabel ? ' · 挂到「' + esc(a.parentLabel) + '」下' : ''}）</span></div>`);
   for (const u of r.diff.updated) {
     const ch = Object.entries(u.changes).map(([k, v]) => `<span class="chip">${esc(k)}=${esc(String(v))}</span>`).join(' ');
     lines.push(`<div class="line upd">~ 改「${esc(titleOf(u.id))}」 ${ch}</div>`);
@@ -150,7 +150,7 @@ const html = `<!doctype html>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">入口 op（schema 锁死，<code>additionalProperties:false</code> 防越权）</h3>
   <table><tr><th>op</th><th>必填</th><th>可选字段</th></tr>
-    ${opSchemaRow('add_task', ['op', 'zoneId', 'title'], 'description, priority, deadline, deadlineType, parentId')}
+    ${opSchemaRow('add_task', ['op', 'zoneId', 'title'], 'description, priority, deadline, deadlineType, parentId, tempId（批内句柄·建新树）')}
     ${opSchemaRow('update_task', ['op', 'id'], 'title, description, completed, priority, deadline, deadlineType, parentId（按 id 部分更新）')}
     ${opSchemaRow('delete_task', ['op', 'id'], '（无）· 注意级联删整棵子树')}
   </table>
@@ -171,16 +171,16 @@ const html = `<!doctype html>
   </ul>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">错误码（协议保证拦截的越界）</h3>
-  <p><code>OP_LIMIT_EXCEEDED</code> · <code>UNKNOWN_TASK_ID</code> · <code>UNKNOWN_ZONE_ID</code> · <code>UNKNOWN_PARENT_ID</code> · <code>INVALID_OP</code></p>
+  <p><code>OP_LIMIT_EXCEEDED</code> · <code>UNKNOWN_TASK_ID</code> · <code>UNKNOWN_ZONE_ID</code> · <code>UNKNOWN_PARENT_ID</code> · <code>DUPLICATE_TEMP_ID</code> · <code>INVALID_OP</code></p>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">边界另一半：forbidden（这块绝不碰）</h3>
   <p class="muted">纯函数：不碰 store / fs / 网络 / 命令；不修改入参 snapshot；副作用（真调 store action + saveSnapshot）留在 wiring 层。→ 与 byok-plan-v2 §4 boundary rules 一致。</p>
 
   <h3 style="font-size:14px;color:#c7cdda;margin:14px 0 6px;">边界缺口（known-gap · 见 docs/harness/test-points.md）</h3>
   <ul>
-    <li><b>TP7 一次性建新多层树</b>（新父+新子同批）：当前不支持——批内新父无 id → <code>UNKNOWN_PARENT_ID</code>（见上「建新树」例）。且真测中 LLM 会<b>静默错挂</b>到已存在的父（护栏放行）。修复方向 T1：add_task 加 tempId 批内引用。</li>
-    <li><b>TP8 diff 未显父名</b>（必做）：上方形态层 add-subtask 只显示「子任务」、不显示挂到谁 → 静默错挂看不见。须暴露父任务可读名。</li>
-    <li><b>TP9 re-parent 无环守护</b>：把父挪到自己子孙下会成环；apply-core 现在只查 parentId 存在，无环/深度检测。</li>
+    <li><b>TP7 一次性建新多层树 ✅ 已支持（核心层）</b>：add_task 加 tempId、子 op 用 parentId 引用（见上「建新树·tempId」例）。⚠ app 内真正落地还需 Phase 3 wiring（addTask 回传真 id）。</li>
+    <li><b>TP8 diff 显父名 ✅</b>：added 带 parentLabel（已有父=名字、新父=「新建:X」），形态层显示「挂到 X 下」→ 防 LLM 静默错挂。</li>
+    <li><b>TP9 re-parent 无环守护 ❌ 仍开</b>：把父挪到自己子孙下会成环；apply-core 现在只查 parentId 存在，无环/深度检测。</li>
   </ul>
 
   <footer>apply-core I/O 契约 & 架构边界 · 真实 planOps 输出 · 形态/原始/协议 三层 · 2026-06-14</footer>
