@@ -728,29 +728,22 @@ export function GlobalView({
           <Button
             variant="outline"
             size="sm"
-            className={`h-8 px-2 border flex-shrink-0 ${isLeafMode ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'bg-gray-800 text-gray-200 border-gray-600'}`}
+            className={`h-8 w-8 p-0 border flex-shrink-0 ${isLeafMode ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'bg-gray-800 text-gray-200 border-gray-600'}`}
             onClick={() => setIsLeafMode(!isLeafMode)}
             title={isLeafMode ? t('view.leafMode') : t('view.treeView')}
           >
             <Network size={14} className={isLeafMode ? "" : "opacity-70"} />
-            {/* 核心修复：为文字添加 span 并根据需要处理 */}
-            <span className="ml-1 whitespace-nowrap">
-              {isLeafMode ? t('view.leafMode') : t('view.treeView')}
-            </span>
           </Button>
 
           {/* 按工作区分组开关 */}
           <Button
             variant="outline"
             size="sm"
-            className={`h-8 px-2 border flex-shrink-0 ${isGroupByZone ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-gray-800 text-gray-200 border-gray-600'}`}
+            className={`h-8 w-8 p-0 border flex-shrink-0 ${isGroupByZone ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-gray-800 text-gray-200 border-gray-600'}`}
             onClick={() => setIsGroupByZone(!isGroupByZone)}
             title={t('view.groupByZone')}
           >
             <Layers size={14} className={isGroupByZone ? "" : "opacity-70"} />
-            <span className="ml-1 whitespace-nowrap">
-              {t('view.groupByZone')}
-            </span>
           </Button>
 
           <div className="sort-mode-selector m-0">
