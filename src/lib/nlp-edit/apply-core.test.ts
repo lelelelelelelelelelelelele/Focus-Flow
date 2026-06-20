@@ -53,7 +53,7 @@ describe('planOps · add_task（happy path）', () => {
         parentId: null,
       },
     ]);
-    expect(r.diff.added).toEqual([{ zoneId: 'z1', title: 'new', parentId: null }]);
+    expect(r.diff.added).toEqual([{ zoneId: 'z1', title: 'new', parentId: null, parentLabel: null }]);
     expect(r.hasDeletes).toBe(false);
   });
 
@@ -252,29 +252,53 @@ describe('planOps · fail-fast', () => {
   });
 });
 
-// ============ 已知缺口 known-gap（见 docs/harness/test-points.md TP7-TP9） ============
-// 钉住"当前行为"作为 known-gap 的可见锚点；T1/T2/T3 落地后把对应 todo 转为正式断言。
-describe('planOps · 已知缺口 known-gap', () => {
-  it('TP7: 一次性建新多层树（新父+新子同批）→ 当前 UNKNOWN_PARENT_ID（T1 落地后应支持）', () => {
+// ============ 建新树（T1 tempId 批内引用）+ diff 显父名（T2） ============
+describe('planOps · 建新树 tempId + parentLabel', () => {
+  it('TP7/T1: 新父带 tempId、子 op 引用它 → plan，一次性建新树', () => {
     const s = snap([zone('z1')], []);
     const r = planOps(s, [
-      { op: 'add_task', zoneId: 'z1', title: '上线' }, // 新父，落地前无 id
-      { op: 'add_task', zoneId: 'z1', title: '部署', parentId: '上线' }, // 引用尚未创建的父
+      { op: 'add_task', zoneId: 'z1', title: '上线', tempId: 't1' },
+      { op: 'add_task', zoneId: 'z1', title: '部署', parentId: 't1' },
     ]);
-    // 当前：批内新父无法被引用 → fail-fast。T1（tempId 批内引用）落地后改为期望 plan。
-    expect(r.kind).toBe('error');
-    if (r.kind === 'error') {
-      expect(r.error.code).toBe('UNKNOWN_PARENT_ID');
-      expect(r.error.opIndex).toBe(1);
-    }
+    expect(r.kind).toBe('plan');
+    if (r.kind !== 'plan') return;
+    expect(r.actions).toHaveLength(2);
+    const child = r.diff.added.find((a) => a.title === '部署');
+    expect(child?.parentLabel).toBe('新建:上线'); // TP8：看得出挂到刚新建的「上线」下
   });
 
-  // T1：schema 加 tempId 批内引用（或顺序 apply 回灌真 id），支持一次性建新多层树
-  it.todo('TP7/T1: add_task 支持 tempId，批内新父可被后续 op 引用 → 建新树不再报错');
+  it('TP8/T2: add 到已存在父 → parentLabel 显示已有父名', () => {
+    const s = snap([zone('z1')], [task('a', { title: '项目A' })]);
+    const r = planOps(s, [{ op: 'add_task', zoneId: 'z1', title: '子', parentId: 'a' }]);
+    expect(r.kind).toBe('plan');
+    if (r.kind === 'plan') expect(r.diff.added[0].parentLabel).toBe('项目A');
+  });
 
-  // T2：diff 暴露父任务名（不只 parentId），让人看出 add-subtask 挂到了谁——防 LLM 静默错挂
-  it.todo('TP8/T2: DiffPreview.added 暴露 parent 可读名/标识，UI 能显示“挂到 X 下”');
+  it('未知 parent（既非已有也非已定义 tempId）→ UNKNOWN_PARENT_ID', () => {
+    const r = planOps(snap([zone('z1')], []), [
+      { op: 'add_task', zoneId: 'z1', title: 'x', parentId: 'ghost' },
+    ]);
+    expect(r.kind).toBe('error');
+    if (r.kind === 'error') expect(r.error.code).toBe('UNKNOWN_PARENT_ID');
+  });
 
-  // T3：re-parent 环/深度守护（把父挪到自己子孙下 → 应报错，而非静默成环）
-  it.todo('TP9/T3: update_task.parentId 指向自身子孙 → 新增 CYCLE/INVALID 错误，而非成环');
+  it('前向引用（引用后面才定义的 tempId）→ UNKNOWN_PARENT_ID', () => {
+    const r = planOps(snap([zone('z1')], []), [
+      { op: 'add_task', zoneId: 'z1', title: '子', parentId: 't1' },
+      { op: 'add_task', zoneId: 'z1', title: '父', tempId: 't1' },
+    ]);
+    expect(r.kind).toBe('error');
+    if (r.kind === 'error') expect(r.error.code).toBe('UNKNOWN_PARENT_ID');
+  });
+
+  it('tempId 与已有任务 id 冲突 → DUPLICATE_TEMP_ID', () => {
+    const r = planOps(snap([zone('z1')], [task('a')]), [
+      { op: 'add_task', zoneId: 'z1', title: 'x', tempId: 'a' },
+    ]);
+    expect(r.kind).toBe('error');
+    if (r.kind === 'error') expect(r.error.code).toBe('DUPLICATE_TEMP_ID');
+  });
+
+  // T3 仍未做：re-parent 环检测
+  it.todo('TP9/T3: update_task.parentId 指向自身子孙 → CYCLE 错误，而非成环');
 });

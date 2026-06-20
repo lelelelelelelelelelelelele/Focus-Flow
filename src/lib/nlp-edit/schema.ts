@@ -37,6 +37,8 @@ export interface AddTaskOp {
   deadline?: number | null;
   deadlineType?: DeadlineType;
   parentId?: string | null;
+  /** 本批内临时句柄：后续 op 的 parentId 可引用它，用来一次性建新树（新父+新子）。 */
+  tempId?: string;
 }
 
 // update_task：按 id 做 Partial 更新（store.updateTask，taskSlice.ts:21）。
@@ -97,7 +99,11 @@ const addTaskSchema = {
     },
     parentId: {
       type: ['string', 'null'],
-      description: '父任务 id，顶级任务为 null。若给出必须是已存在任务。',
+      description: '父任务 id，顶级任务为 null。可为已存在任务 id，或本批内更早 add_task 的 tempId（挂到刚新建的父下）。',
+    },
+    tempId: {
+      type: 'string',
+      description: '本批内临时句柄；给本次新建的任务起个名，后续 op 的 parentId 引用它即可一次性建新树。',
     },
   },
   required: ['op', 'zoneId', 'title'],

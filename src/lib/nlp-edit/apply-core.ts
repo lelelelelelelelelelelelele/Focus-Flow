@@ -27,6 +27,8 @@ export interface AddedPreview {
   zoneId: string;
   title: string;
   parentId: string | null;
+  /** 父任务可读名：已有父=其标题；批内新父=「新建:标题」；顶级=null。让 UI 显示“挂到谁下”，防静默错挂。 */
+  parentLabel: string | null;
 }
 
 // updated：更新任务（id 必须命中已存在任务）。
@@ -62,6 +64,8 @@ export type PlannedAction =
       deadline?: number | null;
       deadlineType?: Task['deadlineType'];
       parentId?: string | null;
+      // 本批内句柄；wiring 落地时据此把后续子任务挂到刚 addTask 出的真实 id 上。
+      tempId?: string;
     }
   | { kind: 'update'; id: string; updates: Partial<Task> }
   | { kind: 'delete'; id: string };
@@ -72,6 +76,7 @@ export type PlanErrorCode =
   | 'UNKNOWN_TASK_ID'
   | 'UNKNOWN_ZONE_ID'
   | 'UNKNOWN_PARENT_ID'
+  | 'DUPLICATE_TEMP_ID'
   | 'INVALID_OP';
 
 export interface PlanError {
@@ -129,6 +134,8 @@ export function planOps(snapshot: Snapshot, ops: EditOp[]): PlanResult {
 
   const zoneIds = new Set(snapshot.zones.map((z) => z.id));
   const taskIds = new Set(snapshot.tasks.map((t) => t.id));
+  const titleById = new Map(snapshot.tasks.map((t) => [t.id, t.title] as [string, string]));
+  const tempTitles = new Map<string, string>(); // 本批内 tempId -> 新任务标题（校验引用 + parentLabel）
 
   const actions: PlannedAction[] = [];
   const added: AddedPreview[] = [];
@@ -144,9 +151,23 @@ export function planOps(snapshot: Snapshot, ops: EditOp[]): PlanResult {
       if (!zoneIds.has(a.zoneId)) {
         return err('UNKNOWN_ZONE_ID', `未知分区 id：${a.zoneId}`, i);
       }
-      if (a.parentId != null && !taskIds.has(a.parentId)) {
+      // tempId 不得与已有任务 id 或本批已定义的 tempId 冲突。
+      if (a.tempId != null && (taskIds.has(a.tempId) || tempTitles.has(a.tempId))) {
+        return err('DUPLICATE_TEMP_ID', `临时 id 冲突：${a.tempId}`, i);
+      }
+      // parentId 可引用已有任务，或本批内【更早】定义的 tempId（前向引用即未知）。
+      if (
+        a.parentId != null &&
+        !taskIds.has(a.parentId) &&
+        !tempTitles.has(a.parentId)
+      ) {
         return err('UNKNOWN_PARENT_ID', `未知父任务 id：${a.parentId}`, i);
       }
+      const parentLabel =
+        a.parentId == null
+          ? null
+          : titleById.get(a.parentId) ??
+            (tempTitles.has(a.parentId) ? `新建:${tempTitles.get(a.parentId)}` : a.parentId);
       actions.push({
         kind: 'add',
         zoneId: a.zoneId,
@@ -156,18 +177,26 @@ export function planOps(snapshot: Snapshot, ops: EditOp[]): PlanResult {
         deadline: a.deadline,
         deadlineType: a.deadlineType,
         parentId: a.parentId ?? null,
+        tempId: a.tempId,
       });
       added.push({
         zoneId: a.zoneId,
         title: a.title,
         parentId: a.parentId ?? null,
+        parentLabel,
       });
+      // 注册 tempId（在解析完本 op 的 parent 之后 → 不能引用自身，强制前向）。
+      if (a.tempId != null) tempTitles.set(a.tempId, a.title);
     } else if (op.op === 'update_task') {
       const u = op as UpdateTaskOp;
       if (!taskIds.has(u.id)) {
         return err('UNKNOWN_TASK_ID', `未知任务 id：${u.id}`, i);
       }
-      if (u.parentId != null && !taskIds.has(u.parentId)) {
+      if (
+        u.parentId != null &&
+        !taskIds.has(u.parentId) &&
+        !tempTitles.has(u.parentId)
+      ) {
         return err('UNKNOWN_PARENT_ID', `未知父任务 id：${u.parentId}`, i);
       }
       // 只取 op 携带的可改字段，剥掉 op / id。
