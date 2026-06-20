@@ -16,6 +16,7 @@
 | TP7 | 一次性建**新多层树**（新父 + 新子） | Episode#2 / 人工 ratify | `covered-now`（核心层）· wiring `deferred-Phase3` | apply-core.test「建新树 tempId」块（plan + parentLabel） | phase1-nlp-core 树/子任务状态 | phase1-io-contract 协议层 |
 | TP8 | diff 预览**必须显父任务名**（防静默错挂） | Episode#2 T2 | `covered-now` | 同上（parentLabel 断言） | phase1-nlp-core | phase1-io-contract |
 | TP9 | re-parent **环 / 深度守护** | Episode#2 T3 | `covered-now` | apply-core.test（CYCLE：自身/子孙 + 合法反例） | phase1-nlp-core 树/子任务状态 | phase1-io-contract「成环」例 |
+| TP10 | priority 与上游对齐（3→**5 级** critical/heavy/high/medium/low）+ 单一真相源守护 | Episode#3 上游 v2.2.0 漂移 | `covered-now` | schema.test 改 5 级 + **编译期完整性断言**（漏档位 tsc 报错） | （口径同步 byok-plan-v2 §6） | phase1-io-contract「枚举锁死」栏自动渲 5 级 |
 
 ## 闭环说明
 

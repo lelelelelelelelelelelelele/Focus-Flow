@@ -132,3 +132,24 @@ LLM 层（R3「新建项目上线，下面加三个子任务」）：模型**没
 - **真测 > 推断,再次验证**:我派活前的判断("已有树✅/新树❌因 id 问题")方向对,但**漏了最危险的一面**——我以为新树会"干净报错",真测才发现 LLM 会**静默错挂**。光推断会把"做不到"当成"安全的做不到",真跑才暴露"不安全的做错"。
 - **探索性 probe 的价值**:97k tok / 3.6min 换到一个会上线伤数据的静默 bug 的提前定位 + function-calling 可用性确认。值。
 - **方法论**:plausible-but-wrong 不只出现在"验证 agent 的发现",也出现在"被构建功能本身的输出"——HIL diff 必须能让人看见语义,不只结构。
+
+---
+
+## Episode #3 · upstream-drift-priority-3to5（外部漂移使我方常量过时）
+
+**触发**：授权 push 时发现 `origin` 直指上游、无写权限（pull-only），且上游今日（2026-06-20）发布 v2.2.0。我方分支落后上游 main 4 commit / 领先 13。
+
+**漂移事实**：上游 `8c06e9e`+`e186f8d` 把 `TaskPriority` 从 3 级 `'low'|'medium'|'high'` 改为 **5 级 `'critical'|'heavy'|'high'|'medium'|'low'`**（第二级 urgent→heavy）。`TaskUrgency` 仍是派生值，未变（我方"urgency 不可设"假设仍成立）。
+
+**对我方的冲击（语义漂移，非文件冲突）**：
+- nlp-edit `schema.ts:19` 把 `PRIORITY_VALUES` 硬编码成 3 级；IO 契约"枚举锁死"栏、给 LLM 的 function schema 同步只给 3 级。
+- 结果：合并上游后，**LLM 永远生不出 `critical`/`heavy`**——静默阉割上游新功能。类型仍是 `TaskPriority`（少枚举不报 tsc 错），**测试也不会红**，只有真实 LLM 生成时丢档位 → 又一个 plausible-but-wrong（绿但缺）。
+- 讽刺锚点：`schema.ts:19` 注释原文"改 types 时这里要同步"——**该注释预言了自己的过时**，但没有机制强制它发生。
+
+**harness 评估（第 3 次）**：
+- **外部漂移是 known-gap 的第二来源**（第一来源=人提问/hard case，第二=上游变更）。测试点账本必须能吸收"上游改了我依赖的常量"这类条目，否则绿色测试掩盖语义过时。
+- **机制缺口**：`PRIORITY_VALUES` 应从 `TaskPriority` **派生**而非手抄，否则"同步"永远靠人记。这是比"这次改对"更根本的修复方向（喂回 plan：枚举单一真相源）。
+- **流程纠偏**：先对齐上游再 fork/push，不把已知过时的常量推出去。push 失败（403 pull-only）反而成了发现漂移的契机——若有写权限直接推，会把 3 级常量固化进 PR。
+
+**新增测试点**：
+- TP10：priority 与上游对齐（3→5 级）；`PRIORITY_VALUES` 单一真相源（从 `TaskPriority` 派生，杜绝手抄漂移）。
