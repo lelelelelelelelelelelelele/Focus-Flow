@@ -20,8 +20,8 @@ describe('枚举值锁死', () => {
     expect([...OP_KINDS].sort()).toEqual(['add_task', 'delete_task', 'update_task']);
   });
 
-  it('priority 锁 low|medium|high', () => {
-    expect([...PRIORITY_VALUES].sort()).toEqual(['high', 'low', 'medium']);
+  it('priority 锁 5 级（与上游 TaskPriority 对齐：critical|heavy|high|medium|low）', () => {
+    expect([...PRIORITY_VALUES].sort()).toEqual(['critical', 'heavy', 'high', 'low', 'medium']);
   });
 
   it('deadlineType 锁 exact|today|tomorrow|week|none', () => {

@@ -15,15 +15,33 @@ import type { TaskPriority, DeadlineType } from '@/types';
 export const OP_KINDS = ['add_task', 'update_task', 'delete_task'] as const;
 export type OpKind = (typeof OP_KINDS)[number];
 
-// 锁死的枚举值（与 src/types/index.ts 对齐；改 types 时这里要同步）
-export const PRIORITY_VALUES: readonly TaskPriority[] = ['low', 'medium', 'high'];
-export const DEADLINE_TYPE_VALUES: readonly DeadlineType[] = [
+// 锁死的枚举值（必须覆盖 src/types/index.ts 的全部档位）。
+// 这里仍是手写字面量（TS 类型在运行时不存在，无法自动枚举 union），
+// 但下方的 `satisfies` + 完整性断言会在【编译期】强制它与 TaskPriority/DeadlineType 同步：
+// 上游若新增/改名档位而这里漏改，tsc 直接报错 —— 杜绝 Episode#3 那种静默漂移。
+export const PRIORITY_VALUES = [
+  'critical',
+  'heavy',
+  'high',
+  'medium',
+  'low',
+] as const satisfies readonly TaskPriority[];
+export const DEADLINE_TYPE_VALUES = [
   'exact',
   'today',
   'tomorrow',
   'week',
   'none',
-];
+] as const satisfies readonly DeadlineType[];
+
+// 完整性断言（单一真相源守护）：若 TaskPriority/DeadlineType 有成员未列入上面数组，
+// 下面的类型会变成 never，赋值即编译失败 → 强制本文件跟随 types/index.ts。
+type _MissingPriority = Exclude<TaskPriority, (typeof PRIORITY_VALUES)[number]>;
+type _MissingDeadlineType = Exclude<DeadlineType, (typeof DEADLINE_TYPE_VALUES)[number]>;
+const _priorityExhaustive: _MissingPriority extends never ? true : never = true;
+const _deadlineTypeExhaustive: _MissingDeadlineType extends never ? true : never = true;
+void _priorityExhaustive;
+void _deadlineTypeExhaustive;
 
 // ---- 解析后的 op TypeScript 类型 ----
 // add_task：必须带 zoneId（store.addTask 要求，taskSlice.ts:182）；parentId 可选。
