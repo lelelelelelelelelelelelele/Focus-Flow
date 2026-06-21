@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BYOK NLP 编辑 · 输入 ↔ 界面 对比</title>
+<style>
+  :root { --bg:#0f1117; --card:#171a23; --card2:#1d212c; --line:#272c3a; --txt:#e6e8ee;
+    --muted:#9aa3b2; --green:#34d399; --amber:#fbbf24; --accent:#818cf8; --red:#f87171; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:23px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 26px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:20px;overflow:hidden}
+  .head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card2);border-bottom:1px solid var(--line)}
+  .num{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .kind{font-weight:600}
+  .body{display:grid;grid-template-columns:360px 1fr;gap:0}
+  .io{padding:16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+  .lbl{font-size:11px;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+  .prompt{background:#0c1730;border:1px solid #25407a;border-radius:8px;padding:10px 12px;font-size:14px;color:#cfe0ff}
+  .init{color:var(--muted);font-size:13px}
+  .out{font-size:13px;line-height:1.7}
+  .out .add{color:var(--green)} .out .upd{color:#7cc4f5} .out .del{color:var(--red)} .out .new{color:var(--amber)}
+  .shotwrap{padding:10px;background:#0a0c12;display:flex;align-items:center;justify-content:center}
+  .shotwrap img{width:100%;border-radius:8px;display:block}
+  code{background:var(--card2);padding:1px 5px;border-radius:4px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .note{color:var(--muted);font-size:12.5px;margin:6px 0 22px}
+  @media(max-width:820px){.body{grid-template-columns:1fr}.io{border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BYOK NLP 编辑 · 输入（自然语言）↔ 界面 对比</h1>
+  <p class="sub">真 MiMo V2.5（中国区 Token Plan）· Playwright 驱动 dev app @8088 经 <code>/__byok</code> 真打 · 每例左=输入/初始态/模型产出，右=该例真实 diff 预览界面 · 2026-06-21</p>
+  <p class="note">另见 Phase 4 三态（输入→预览→落地树）：<a href="../phase1-nlp-core.html" style="color:var(--accent)">phase1-nlp-core.html</a>。截图均为「确认前的 diff 预览」——模型把左侧自然语言翻成的 ops，父名/级联/确认护栏一目了然，无静默错挂。</p>
+
+  <div class="card"><div class="head"><span class="num">01</span><span class="kind">新增 · 多个顶级任务</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">帮我加三个任务：晨跑、读论文、写代码</div></div>
+      <div><div class="lbl">初始</div><div class="init">空分区「工作」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="add">+ 晨跑 / 读论文 / 写代码</span>（均顶级）</div></div>
+    </div><div class="shotwrap"><img src="./01-add-flat.png" alt="01"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">02</span><span class="kind">新增 · 建新多层树（tempId）</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">新建一个「发布 v2」任务，下面有三步：写 changelog、打 tag、发公告</div></div>
+      <div><div class="lbl">初始</div><div class="init">空分区「工作」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="add">+ 发布 v2</span>（顶级）；3 步 <span class="new">挂到「新建:发布 v2」下</span></div></div>
+    </div><div class="shotwrap"><img src="./02-add-tree.png" alt="02"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">03</span><span class="kind">加子任务 · 到已有任务</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">给项目A加两个子任务：需求评审、技术方案</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「项目A」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="add">+ 需求评审 / 技术方案</span> <span class="new">挂到「项目A」下</span>（已有父名）</div></div>
+    </div><div class="shotwrap"><img src="./03-sub-existing.png" alt="03"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">04</span><span class="kind">加子任务 · 到已有任务</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">在项目A下面再加一个「写测试」</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「项目A」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="add">+ 写测试</span> <span class="new">挂到「项目A」下</span></div></div>
+    </div><div class="shotwrap"><img src="./04-sub-existing2.png" alt="04"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">05</span><span class="kind">更新 · 优先级</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">把「买菜」改成高优先级</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「买菜」（medium）</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="upd">~ 买菜：priority = high</span></div></div>
+    </div><div class="shotwrap"><img src="./05-update-priority.png" alt="05"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">06</span><span class="kind">更新 · 标记完成</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">把「写报告」标记为已完成</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「写报告」（未完成）</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="upd">~ 写报告：completed = true</span></div></div>
+    </div><div class="shotwrap"><img src="./06-update-complete.png" alt="06"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">07</span><span class="kind">重挂父 · re-parent</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">把「子任务X」挪到「项目A」下面</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「项目A」「子任务X」（均顶级）</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="upd">~ 子任务X</span> <span class="new">挂到「项目A」下</span>（父名防线扩到 update）</div></div>
+    </div><div class="shotwrap"><img src="./07-reparent.png" alt="07"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">08</span><span class="kind">重挂父 · re-parent</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">把「写初稿」移到「写周报」下面</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「写周报」「写初稿」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="upd">~ 写初稿</span> <span class="new">挂到「写周报」下</span></div></div>
+    </div><div class="shotwrap"><img src="./08-reparent2.png" alt="08"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">09</span><span class="kind">删除 · 级联子树（强制确认）</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">删掉「旧项目」</div></div>
+      <div><div class="lbl">初始</div><div class="init">「旧项目」含子1、子2</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="del">删除 3 个（含级联 2）</span>；需勾选确认，Apply 默认禁用</div></div>
+    </div><div class="shotwrap"><img src="./09-delete-cascade.png" alt="09"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">10</span><span class="kind">删除 · 单个</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">删除「临时任务」</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「临时任务」「保留任务」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="del">删除 1 个</span>（保留任务不动）；需勾选确认</div></div>
+    </div><div class="shotwrap"><img src="./10-delete-leaf.png" alt="10"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">11</span><span class="kind">混合 · 增 + 改 + 删</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">加一个「今天复盘」，把「写周报」设为高优先级，删掉「测试任务」</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「写周报」「测试任务」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="add">+ 今天复盘</span>；<span class="upd">~ 写周报 high</span>；<span class="del">删 测试任务</span></div></div>
+    </div><div class="shotwrap"><img src="./11-mixed.png" alt="11"></div></div>
+  </div>
+
+  <div class="card"><div class="head"><span class="num">12</span><span class="kind">混合 · 加子任务 + 改优先级</span></div>
+    <div class="body"><div class="io">
+      <div><div class="lbl">输入</div><div class="prompt">给项目A加个子任务「联调」，再把项目A改成最高优先级</div></div>
+      <div><div class="lbl">初始</div><div class="init">已有「项目A」</div></div>
+      <div><div class="lbl">模型产出</div><div class="out"><span class="add">+ 联调</span> <span class="new">挂到「项目A」下</span>；<span class="upd">~ 项目A：priority = critical</span></div></div>
+    </div><div class="shotwrap"><img src="./12-mixed2.png" alt="12"></div></div>
+  </div>
+
+</div>
+</body>
+</html>
