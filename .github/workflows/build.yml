@@ -38,6 +38,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Typecheck & build (tsc -b + vite build)
+        run: npm run build
+
   build-windows:
     needs: test
     runs-on: windows-latest
