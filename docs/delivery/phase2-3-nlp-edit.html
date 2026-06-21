@@ -58,7 +58,7 @@
     <span class="icon">✅</span>
     <div>
       <b>Phase 2+3 完成，门槛全绿（214/215，1 为真 LLM smoke 自跳过）</b>
-      <div class="muted">5-lens 对抗评审 25 findings 已修 · <b class="ok">真 LLM ops 证据已真跑捕获</b>（MiMo V2.5 中国区，建新树无错挂）· UI 三态截图待补</div>
+      <div class="muted">5-lens 对抗评审 25 findings 已修 · <b class="ok">真 LLM 三态截图已真跑捕获</b>（Playwright 驱动 dev app，MiMo V2.5 中国区，建新树无错挂）</div>
     </div>
   </div>
   <p class="note">与 <code>episode-log.md</code>（方法论 Episode #4）/ <code>phase1-nlp-core.html</code>（Phase 1 verdict）分工：本份是 Phase 2+3 的交付判断。</p>
@@ -108,11 +108,11 @@
   </div>
   <p class="note">真测两点：① 抽象版（未给任务名）→ 模型不瞎编不错挂，<b>反问要任务名</b>（好安全行为，对话框走 NO_TOOL_CALL 显示其文本）；② 故 MiMo 对强制 <code>tool_choice</code> 非硬执行（评审 contract lens 预判命中）。<b>UI 三态截图</b>（①输入 ②diff 预览含父名 ③落地树）仍待用户在 <code>localhost:8088</code> 真跑补图（本机无浏览器驱动 + key 仅用户侧）。</p>
   <div class="shots">
-    <div class="shot"><div class="ph">① 对话框输入态</div><div class="when">待用户真跑截图</div></div>
-    <div class="shot"><div class="ph">② diff 预览（含父任务名 TP8）</div><div class="when">待用户真跑截图</div></div>
-    <div class="shot"><div class="ph">③ 落地后任务树</div><div class="when">待用户真跑截图</div></div>
+    <div class="shot" style="border-style:solid;padding:0;overflow:hidden"><img src="./phase4-shot1-input.png" style="width:100%;display:block" alt="① 对话框输入态"/></div>
+    <div class="shot" style="border-style:solid;padding:0;overflow:hidden"><img src="./phase4-shot2-preview.png" style="width:100%;display:block" alt="② diff 预览（含父任务名 TP8）"/></div>
+    <div class="shot" style="border-style:solid;padding:0;overflow:hidden"><img src="./phase4-shot3-tree.png" style="width:100%;display:block" alt="③ 落地后任务树"/></div>
   </div>
-  <p class="note">真跑命令（CLI ops 证据，key 从 env，不入仓）：<code>BYOK_KEY=… BYOK_MODEL=… npx vitest run src/lib/nlp-edit/nlp-smoke.test.ts</code>。断言：无新子任务被静默错挂到既有诱饵任务、且用 tempId 建新树。</p>
+  <p class="note">①输入　②diff 预览（「收集数据/写初稿/改定稿 ↳ 挂到『新建:写周报』下」= TP8 真模型生效）　③落地后任务树（写周报带三子，toast「已应用 6 项」）。另有 <code>phase4-shot0-config.png</code>（应用内 BYOK 配置表单）。由 Playwright 驱动 dev app（8088，经 /__byok 真打 MiMo V2.5 中国区）跑出；CLI ops 证据见 <a href="./phase4-real-llm-evidence.md">phase4-real-llm-evidence.md</a>（<code>BYOK_KEY=… npx vitest run …nlp-smoke…</code>）。</p>
 
   <h2>不在本期 / 后续</h2>
   <p class="note">Tauri 原生 http（生产/打包态直连，替代 dev 代理）· keychain/stronghold 加密 key（MVP 明文）· 多轮对话 / 对话记忆 · 推上游（pull-only，需作者合 PR）。</p>

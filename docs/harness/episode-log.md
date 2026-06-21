@@ -203,4 +203,4 @@ provider.ts（注入 fetch / storage / now / endpoint，可单测）+ apply-core
 - **端点真测**：tp- key 是**分区/分集群**的。打 SGP → `401 Invalid API Key`；切**中国区** `token-plan-cn.xiaomimimo.com/v1` → 通。没瞎猜 base：所有候选都是 `*.xiaomimimo.com`（用户自己 provider 域），key 只会发到小米自家服务器，故可安全真试。
 - **Episode#2 在真模型上被守住**：具体硬样本下 MiMo V2.5 Pro 用 tempId 把三个小点挂到**新建**的「写周报」下（parentLabel=`新建:写周报`），**未**错挂到既有诱饵「项目A」。
 - **真测 > 推断，第三次**：抽象版（a.txt 原文，未给任务名）→ 模型**反问要任务名**而非瞎编/错挂（好安全行为）；由此实证 **MiMo 对强制 tool_choice 非硬执行**（评审 contract lens 预判命中）。对话框 NO_TOOL_CALL 分支把反问显示给用户，降级优雅。
-- **仍缺**：UI 三态截图（需用户浏览器 + byok_v1 设在 8088 origin；本机无驱动）。ops 层证据已闭环。
+- **UI 三态截图（已补，Playwright）**：用户授权 computer-use 后，发现运行中的 FocusFlow 是旧打包版、Tauri 无 debug 二进制（首编很慢）、浏览器在 computer-use 下是只读 tier。改用 `scripts/e2e-shots.mjs`（playwright-core + 缓存 chromium-1228，无头）驱动 dev app（8088，经 `/__byok` 真打同一 MiMo 中国区端点），自动：建分区 → 填 BYOK 配置表单 → 输入 → 生成 → 预览 → 应用，逐态截图存 docs/delivery/。E2E 真测又抓到一手：**空 store 时模型正确拒绝「没有分区」**（空分区 prompt 守护在真模型上生效），脚本补建分区后即正确建树。三态 + 配置表单图嵌入两份交付报告。**Phase 4 收口，无 known-gap。**

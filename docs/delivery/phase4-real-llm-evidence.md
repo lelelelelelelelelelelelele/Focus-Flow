@@ -57,6 +57,13 @@ diff.added:
 1. **抽象版硬样本**（a.txt 原文「下午要干三件事，其中第二件下面有三个小点」，**未给具体任务名**）→ MiMo **没有瞎编、没有错挂**，而是返回文本**反问**「三件事分别是什么 / 三个小点是什么」。这是个**好的安全行为**；对话框走 `NO_TOOL_CALL` 分支，把模型的反问原样显示给用户去补充。
 2. 由 1 可见 **MiMo 对强制 `tool_choice` 不是硬执行**（信息不足时会回文本而非被强制吐 tool_call）——正是评审 contract lens 预判的「部分兼容网关不强吃 forced tool_choice」。给**具体**输入后，模型正常调用工具、建树正确（上面的证据）。
 
-## 仍待补：UI 三态截图
+## UI 三态截图（已真跑捕获 ✅）
 
-ops 层证据（本页）已闭环。剩 §7 头条的**真实 UI 三态截图**（①对话框输入 ②diff 预览含父名 ③落地后任务树）——需在浏览器 `localhost:8088`（byok_v1 设在该 origin）由人真跑截，本机无浏览器驱动 + key 仅在用户侧，故待用户补图填进 `phase1-nlp-core.html` / `phase2-3-nlp-edit.html` 的截图槽。
+由 `scripts/e2e-shots.mjs`（Playwright 无头 chromium）驱动 dev app（`localhost:8088`，经 `/__byok` 代理真打同一 MiMo 中国区端点）跑出，存于本目录：
+
+- `phase4-shot0-config.png` — 应用内 BYOK 配置表单（Phase 5：填 base/key/model 写 `byok_v1`，发版可用）
+- `phase4-shot1-input.png` — ① 对话框输入态
+- `phase4-shot2-preview.png` — ② diff 预览：**新增·6**，「收集数据/写初稿/改定稿 ↳ 挂到『新建:写周报』下」（TP8 父名防线在真模型 + 真 UI 上生效）
+- `phase4-shot3-tree.png` — ③ 落地后任务树：写周报 带三个子任务，toast「已应用 AI 编辑（6 项）」
+
+E2E 真测发现：无头 profile 无持久化（Tauri sqlite 在浏览器 no-op），store 初始为空 → 模型正确拒绝「当前没有任何分区」（= 空分区 prompt 守护生效）；脚本先建一个分区再跑，模型即正确建树。截图嵌入 `phase1-nlp-core.html` / `phase2-3-nlp-edit.html` 截图槽。

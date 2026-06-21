@@ -104,13 +104,14 @@
     </div>
   </div>
 
-  <h2>页面截图（如实标注 · 本期无 UI）</h2>
-  <p class="note">真实<b>页面</b>截图是 §7 证据，要等有 UI 才能出。其中 <b>② diff 形态</b>本期已可看（上面的 I/O 契约用真核心输出渲了 diff 的样子）；①③ 待 UI/LLM 落地填真图（不放假图）：</p>
+  <h2>真实页面截图（§7 证据 · Phase 4 真 LLM 三态 ✅）</h2>
+  <p class="note">真 key（小米 MiMo V2.5 中国区 Token Plan）+ 真模型 + 真 UI，由 Playwright 驱动 dev app（localhost:8088，经 <code>/__byok</code> 代理）跑硬样本「下午要干三件事…写周报下三个小点」。三态如下（不是假图）：</p>
   <div class="shots">
-    <div class="shot"><div class="ph">① 对话框输入态</div><div class="when">Phase 3（UI 渲出 NlpEditDialog）</div></div>
-    <div class="shot" style="border-style:solid;border-color:#3b3f6e;"><div class="ph" style="color:var(--accent);">② diff 形态 · 已可看</div><div class="when"><a href="./phase1-io-contract.html">→ I/O 契约（真核心输出）</a></div></div>
-    <div class="shot"><div class="ph">③ 落地后任务列表</div><div class="when">Phase 4（真实语言→todo 三态）</div></div>
+    <div class="shot" style="border-style:solid;padding:0;overflow:hidden"><img src="./phase4-shot1-input.png" style="width:100%;display:block" alt="① 对话框输入态"/></div>
+    <div class="shot" style="border-style:solid;padding:0;overflow:hidden"><img src="./phase4-shot2-preview.png" style="width:100%;display:block" alt="② diff 预览（含父任务名）"/></div>
+    <div class="shot" style="border-style:solid;padding:0;overflow:hidden"><img src="./phase4-shot3-tree.png" style="width:100%;display:block" alt="③ 落地后任务树"/></div>
   </div>
+  <p class="note">① 输入态　② diff 预览：「收集数据/写初稿/改定稿 ↳ 挂到『新建:写周报』下」= TP8 父名防线在真模型上生效，无静默错挂　③ 落地后任务树：写周报 带三个子任务，toast「已应用 AI 编辑（6 项）」。另有 <code>phase4-shot0-config.png</code>（应用内 BYOK 配置表单）。详见 <a href="./phase4-real-llm-evidence.md">phase4-real-llm-evidence.md</a> / <a href="./phase2-3-nlp-edit.html">phase2-3 报告</a>。</p>
 
   <h2>建议先补的两个前置补丁（harness 抓到的 D1/D2）</h2>
   <ul>

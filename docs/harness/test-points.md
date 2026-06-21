@@ -7,9 +7,9 @@
 
 | ID | 测试点 | 来源 | 状态 | → test | → report | → 架构边界 |
 |---|---|---|---|---|---|---|
-| TP1 | 验收证据 = 真 LLM→todo 三态截图（非 mock），针对新功能 | 受众/证据讨论 | `pending-run`（工具就绪：dev@8088 + Wand2 入口；待用户用自己 key 真跑截图） | Phase4 真 LLM 截图 | byok-plan-v2 §7/§8 / phase2-3 报告 | — |
-| TP2 | 人类报告 = HTML + 实测截图 | 报告格式讨论 | `covered-now`（HTML×2）/ 截图 `pending-run` | — | phase1-nlp-core.html / phase2-3-nlp-edit.html | — |
-| TP3 | mock 只做 gate；集成证据必须真跑 | mock-vs-real 争论 | `covered-now`（gate + **真 LLM ops 证据已真跑**：MiMo V2.5 中国区，建新树无错挂）；UI 截图 `pending-run` | provider.test（mock 罐头）+ nlp-smoke（真打 MiMo V2.5，skip 不进 CI） | §7 两层 / phase4-real-llm-evidence.md | — |
+| TP1 | 验收证据 = 真 LLM→todo 三态截图（非 mock），针对新功能 | 受众/证据讨论 | `covered-now`（Playwright 驱动 dev app 真跑 MiMo V2.5，三态截图入 docs/delivery/） | scripts/e2e-shots.mjs（Playwright） | phase1-nlp-core.html 截图槽 / phase2-3 报告 | — |
+| TP2 | 人类报告 = HTML + 实测截图 | 报告格式讨论 | `covered-now`（HTML×2 + 真三态截图已嵌入） | — | phase1-nlp-core.html / phase2-3-nlp-edit.html | — |
+| TP3 | mock 只做 gate；集成证据必须真跑 | mock-vs-real 争论 | `covered-now`（gate + **真 LLM 证据已真跑**：CLI ops + UI 三态截图，MiMo V2.5 中国区，建新树无错挂） | provider.test（mock）+ nlp-smoke（真，skip）+ e2e-shots（Playwright 真截图） | §7 两层 / phase4-real-llm-evidence.md | — |
 | TP4 | 报告受众 = 我自己（非上游 maintainer） | 受众纠偏 | `covered-now` | — | 各 delivery 报告 §0 受众 | — |
 | TP5 | 验证环境口径（sandbox / CI 测试在哪算数） | Episode#1 D1/D2 | `covered-now` | CI `test` job（push/PR 跑 vitest run），发版仍只在 v* tag | byok-plan-v2 §7 verification_env | .github/workflows/build.yml |
 | TP6 | 子任务 / 移动 / 删子树（父**已存在**） | 树提问 | `covered-now` | apply-core.test（happy + 护栏） | — | phase1-io-contract 协议层 |
@@ -26,6 +26,6 @@
 - **TP3 两层就位**：gate = `provider.test` 的 mock 罐头响应断言（进 CI）；evidence = `nlp-smoke.test.ts` 真打 ModelScope 网关（`describe.skipIf(!BYOK_KEY)` → **不进 CI**）。真 LLM 三态截图（TP1/TP2 截图）= 浏览器侧待用户真跑（本机无浏览器驱动 + key 仅在用户 localStorage）。
 - **TP11/TP12 新增（来自 Phase 2 对抗评审）**：5 lens（boundary/keyleak/contract/tests/spec）共 25 条 findings，已修真问题——key 脱敏 + Authorization 末位写防覆盖（TP11）；arguments 对象/多 call 聚合/NO_TOOL_CALL 带名/BAD_RESPONSE（TP12）；TP8 扩到 update；空分区 prompt 分支；快照 300 条上限。本批 +36 测试（apply-core/provider/store/UI）。
 - **TP9/TP5 维持闭环**：TP9 = CYCLE 守护；TP5 = CI `test` job 为权威 gate，本地 sandbox 辅助。
-- **known-gap（明确登记，未忘）**：① TP1 真 LLM 三态截图、② TP3 evidence 层真 run —— 工具均就绪（dev@8088 + Wand2 入口 + nlp-smoke），**仅差用户用自己的 key 真跑**；Phase 4 收口。
+- **Phase 4 收口（2026-06-21，已无 known-gap）**：真 LLM 三态证据已真跑——① CLI ops（`nlp-smoke` 真打 MiMo V2.5）+ ② UI 三态截图（`scripts/e2e-shots.mjs` 用 Playwright 驱动 dev app，经 `/__byok` 真打 MiMo，截「输入/diff 预览含父名/落地树」入 `docs/delivery/`）。两处都验到「收集数据/写初稿/改定稿 挂到『新建:写周报』下、不错挂到既有任务」。凭据=用户的小米 MiMo Token Plan（中国区，key 仅在 gitignore 的 `.byok.local.json`，不入仓）。
 - 残留风险（非阻塞，已记 phase2-3 报告 Residual）：temperature:0 + 强制 tool_choice 对个别网关可能被拒；base 缺 `/v1` 仅弱提示；strict structured-output 与 schema 的 `oneOf` 不兼容（当前未启用，apply-core 兜底）。
 - 新测试点随人追问 / 外部漂移 / 对抗评审继续入表；本批新增「评审 findings → 修复 + 测试 → 入账本」这一闭环来源。
