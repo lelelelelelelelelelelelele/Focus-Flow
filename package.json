@@ -2,7 +2,7 @@
   "name": "focus-flow",
   "description": "A floating todo app with Pomodoro timer - stay focused and organized",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -92,7 +92,6 @@
     "globals": "^16.5.0",
     "jsdom": "^29.1.1",
     "kimi-plugin-inspect-react": "^1.0.3",
-    "playwright-core": "^1.61.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
